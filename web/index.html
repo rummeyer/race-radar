@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b0c">
+  <title>HYROX Radar</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b0b0c'/><circle cx='16' cy='16' r='10' fill='none' stroke='%23ffed00' stroke-width='2.5'/><circle cx='16' cy='16' r='5' fill='none' stroke='%23ffed00' stroke-width='2.5'/><circle cx='16' cy='16' r='1.8' fill='%23ffed00'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-inner">
+      <a class="mark" href="#dashboard" aria-label="HYROX Radar">
+        <span class="radar" aria-hidden="true"><i></i></span>
+        <span class="word">HYROX <b>RADAR</b></span>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#dashboard" data-tab="dashboard">Dashboard</a>
+        <a href="#add" data-tab="add">Add race</a>
+        <a href="#settings" data-tab="settings">Settings</a>
+      </nav>
+      <div id="live" class="live"><span class="pulse"></span><span id="live-text">Connecting…</span></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="tab-dashboard" class="tab">
+      <div class="hero">
+        <h1>Never miss<br><em>a start line.</em></h1>
+        <p>The radar opens the ticket shops every few minutes and tells you the moment a sold-out ticket comes back.</p>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span class="num" id="s-races">0</span><span class="lbl">Races watched</span></div>
+        <div class="stat hot"><span class="num" id="s-open">0</span><span class="lbl">Tickets available</span></div>
+        <div class="stat"><span class="num" id="s-checks">0</span><span class="lbl" id="s-checks-lbl">Checks</span></div>
+        <div class="stat"><span class="num" id="s-alerts">0</span><span class="lbl" id="s-alerts-lbl">Alerts sent</span></div>
+      </div>
+
+      <div class="cols">
+        <div>
+          <h2 class="head">Your races</h2>
+          <div id="watches" class="stack"></div>
+          <div id="no-watches" class="empty" hidden>
+            <p>No race on the radar yet.</p>
+            <a class="btn" href="#add">Add a race</a>
+          </div>
+
+          <h2 class="head">Waiting for a race</h2>
+          <div class="panel">
+            <p class="muted">A race not announced yet: you're told when one whose name fits shows up on Find my race, and again when its tickets go on sale. <code>*</code> stands for anything.</p>
+            <form id="search-form" class="row">
+              <input id="pattern" placeholder="*Berlin*" autocomplete="off" aria-label="Race name to wait for">
+              <button type="submit" class="btn">Wait for it</button>
+            </form>
+            <ul id="searches" class="lines"></ul>
+          </div>
+        </div>
+
+        <aside>
+          <h2 class="head">Live log</h2>
+          <div class="panel log-panel">
+            <div id="now" class="now" hidden><span class="spinner"></span><div><b>Checking</b><span id="now-what"></span></div></div>
+            <ol id="log" class="log"></ol>
+            <p id="no-log" class="muted small">Nothing yet since the radar started.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Add a race -->
+    <section id="tab-add" class="tab" hidden>
+      <h2 class="head big">Add a race</h2>
+      <div class="panel">
+        <ol class="steps-guide">
+          <li><b>Pick the race</b>from HYROX's Find my race</li>
+          <li><b>Choose as in the shop</b>category, class, gender…</li>
+          <li><b>Tick your tickets</b>and start watching</li>
+        </ol>
+
+        <div class="field">
+          <label for="event">Race</label>
+          <select id="event" disabled><option>Loading races from Find my race…</option></select>
+          <div class="row small">
+            <label class="check"><input type="checkbox" id="youth"> Youngstars races</label>
+            <label class="check"><input type="checkbox" id="all"> Races without tickets yet</label>
+          </div>
+        </div>
+        <details class="field">
+          <summary>Or paste a link</summary>
+          <div class="row">
+            <input id="link" type="url" placeholder="https://hyrox.com/event/… or the ticket shop's link">
+            <button id="open-link" class="btn ghost" type="button">Open</button>
+          </div>
+        </details>
+
+        <div id="wizard" class="wizard" hidden>
+          <div class="race-title">
+            <h3 id="w-title"></h3>
+            <span id="w-dates" class="muted"></span>
+          </div>
+          <ol id="w-path" class="chips"></ol>
+          <div id="w-busy" class="now" hidden><span class="spinner"></span><div><b>Opening the ticket shop</b><span>about 20 seconds</span></div></div>
+          <p id="w-error" class="error" hidden></p>
+          <div id="w-options" class="choices"></div>
+          <div id="w-tickets" hidden>
+            <p class="muted">Tick the tickets you want — none ticked means any of them.</p>
+            <ul id="w-list" class="tickets pick"></ul>
+            <button id="save-watch" class="btn big" type="button">Start watching</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="tab-settings" class="tab" hidden>
+      <h2 class="head big">Settings</h2>
+      <form id="settings-form" class="settings">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Pushover</h3>
+            <label class="switch"><input type="checkbox" id="p-on"><span></span></label>
+          </div>
+          <div class="grid">
+            <div class="field"><label for="p-token">App token</label><input id="p-token" type="password" autocomplete="off"></div>
+            <div class="field"><label for="p-user">User key</label><input id="p-user" type="password" autocomplete="off"></div>
+            <div class="field"><label for="p-device">Send to</label><select id="p-device"><option value="">All devices</option></select></div>
+          </div>
+          <div class="row"><button type="button" class="btn ghost" data-test="pushover">Send a test</button><span class="muted small" data-note="pushover"></span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Email</h3>
+            <label class="switch"><input type="checkbox" id="e-on"><span></span></label>
+          </div>
+          <div class="grid">
+            <div class="field"><label for="e-host">SMTP server</label><input id="e-host" placeholder="smtp.example.com"></div>
+            <div class="field"><label for="e-port">Port</label><input id="e-port" type="number" placeholder="587"></div>
+            <div class="field"><label for="e-user">Username</label><input id="e-user" autocomplete="off"></div>
+            <div class="field"><label for="e-pass">Password</label><input id="e-pass" type="password" autocomplete="off"></div>
+            <div class="field"><label for="e-from">From</label><input id="e-from" placeholder="the username, if empty"></div>
+            <div class="field"><label for="e-to">To</label><input id="e-to" placeholder="you@example.com, more with commas"></div>
+          </div>
+          <div class="row"><button type="button" class="btn ghost" data-test="email">Send a test</button><span class="muted small" data-note="email"></span></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Radar</h3></div>
+          <div class="field">
+            <label for="interval">Check every</label>
+            <select id="interval">
+              <option value="2">2 minutes</option>
+              <option value="5">5 minutes</option>
+              <option value="10">10 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">hour</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row sticky">
+          <button type="submit" class="btn big">Save settings</button>
+          <span id="settings-note" class="muted"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <span>HYROX Radar <span id="version"></span></span>
+    <span>Not affiliated with HYROX. Reads the public ticket shops as a visitor would — it never buys.</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
