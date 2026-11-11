@@ -9,7 +9,7 @@ days, change plans — and they're gone again within minutes. HYROX Radar watche
 for you and sends a notification the moment the ticket you want can be bought.
 
 <p align="center">
-  <img src="docs/dashboard.png" alt="HYROX Radar's dashboard: races watched with their tickets sold out, a live log of the checks, and a search waiting for a Berlin race" width="820">
+  <img src="docs/dashboard.png" alt="HYROX Radar's dashboard: Miami Beach watched with its Open Men tickets sold out, New York set up by hand and not on sale yet, a live log of the checks, and a search waiting for a Berlin race" width="820">
 </p>
 
 One small Go program with a dashboard in the browser, made to run around the clock on a
