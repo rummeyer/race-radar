@@ -1,6 +1,6 @@
 # HYROX Radar
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.25+-00ADD8.svg)](https://go.dev)
 
@@ -19,6 +19,8 @@ Raspberry Pi or any Linux box:
 |---|---|
 | 🎯 **Any race, any ticket** | Pick the race from HYROX's *Find my race*, make the same choices as in its shop — Singles › Open › Men — and tick the tickets you want: Friday, Saturday, or any of them. |
 | 🔔 **Told at once** | Pushover (all your devices, or just one) and email. Once per ticket coming back, not every few minutes while it lasts. |
+| 🌍 **Every region's shop** | USA, DACH, UK, France, Spain, Benelux, Nordics, Asia, Australia… — the shop's current design and its classic checkout alike. |
+| 🕒 **Before the shop opens** | Set a race up by hand — Singles, Open, Men, Friday — and be told when its shop opens; from then on it is watched like any other. |
 | 🗓️ **Races not announced yet** | Wait for `Berlin`: you're told when a race whose name contains it shows up, and again when its tickets go on sale. |
 | 📡 **A dashboard** | What is watched, what is sold out or available, what is being checked right now, when the next round is, and a live log. |
 | 🛟 **Tells you when it breaks** | Three failed checks in a row — the shop changed, the race is gone — and you get told, and again once it works. |
@@ -39,8 +41,15 @@ Raspberry Pi or any Linux box:
 
 The ticket shops build their pages in the browser, so the radar opens them the way you would: in
 headless Chromium, clicking *Buy Tickets* and then your choices, and reading which tickets say
-*Unavailable*. One shop at a time, every 5 minutes by default — about 7 seconds per race on a
-Raspberry Pi 5. It never logs in, never adds anything to a cart and never buys.
+*Unavailable* or *Sold out*. One shop at a time, every 5 minutes by default — about 7 to 10
+seconds per race on a Raspberry Pi 5. It never logs in, never adds anything to a cart and never
+buys.
+
+Every region has its own shop — `usa.hyrox.com`, `da.hyrox.com`, `gb.hyrox.com`,
+`singapore.hyrox.com` and so on — all run by vivenu, in one of two designs: the current one, and
+the classic checkout that opens over the race's page (the DACH and Spanish shops, among others).
+The radar reads both, and finds a race's shop from its page on hyrox.com, passing over the
+hotel, volunteer and local Youngstars links there.
 
 ## Install
 
@@ -84,7 +93,12 @@ journalctl -u hyrox-radar -f         # what it is doing
 2. **Add race** — choose the race, then *Singles*, *Open*, *Men* and so on as the shop asks.
    Each step opens the shop afresh, so give it a few seconds. Tick the tickets you want and
    *Start watching*. None ticked means any of them.
-3. **Dashboard** — your races with their tickets. *Check now* looks at once, *Pause* stops
+   - **Shop not open yet?** Races without tickets show under *Races without tickets yet*.
+     Choose one and set it up by hand: category, class, gender, and the days you'd race —
+     the plain tickets of those, not charity or adaptive ones. It shows *Not on sale yet*
+     until the shop opens; then you're told, and its tickets are watched from the next check.
+3. **Dashboard** — your races with their tickets. A race's name opens its page on hyrox.com,
+   *Open shop* its ticket shop, sold out or not. *Check now* looks at once, *Pause* stops
    watching for a while.
 4. **Waiting for a race** — enter part of its name: `Berlin`, `Hamburg`, `Miami`, any case.
    Races there already when you add it are not news; a new one is, and so is its tickets going
@@ -101,8 +115,7 @@ journalctl -u hyrox-radar -f         # what it is doing
 
 Pushover alerts are sent with high priority, so they come through quiet hours. Tap the link,
 pick the ticket, pay — returned tickets go fast. The link opens the shop's tickets page, one click
-shorter than the event's. On the dashboard every race links to its shop too, sold out or not, to
-see for yourself.
+shorter than the event's.
 
 ## Good to know
 

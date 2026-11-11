@@ -192,3 +192,59 @@ func TestNotifyNeedsAChannelAndPushoverSendsToOneDevice(t *testing.T) {
 		t.Errorf("sent %+v", form)
 	}
 }
+
+func TestARaceSetUpByHandWaitsForItsShopThenWatchesItsDays(t *testing.T) {
+	shop := &fakeShop{page: tickets(true, false)}
+	r, sent, _ := radarWith(t, shop)
+	planned := &Watch{ID: "p1", Event: "Berlin", RacePage: "https://hyrox.com/event/berlin/", Planned: true, Waiting: true,
+		Path: []string{"Singles", "Open", "Men"}, Days: []string{"Friday"}}
+	_ = r.store.Update(func(d *Data) error { d.Watches = append(d.Watches, planned); return nil })
+	open := false
+	r.findShop = func(context.Context, string) (string, error) {
+		if !open {
+			return "", ErrNoShop
+		}
+		return "https://shop/event/berlin", nil
+	}
+	ctx := context.Background()
+
+	for range 4 {
+		r.Check(ctx, "p1")
+	}
+	if w := r.store.Read().Find("p1"); !w.Waiting || w.Failures != 0 || w.Error != "" || len(*sent) != 0 {
+		t.Fatalf("no shop yet is waiting, not failing: %+v, sent %+v", w, *sent)
+	}
+
+	open = true
+	r.Check(ctx, "p1")
+	w := r.store.Read().Find("p1")
+	if w.Waiting || w.URL != "https://shop/event/berlin" || w.TicketsURL != "https://shop/tickets/1" {
+		t.Errorf("open shop not taken in: %+v", w)
+	}
+	if len(*sent) != 2 || !strings.HasPrefix((*sent)[0].Title, "Tickets on sale") || !strings.Contains((*sent)[1].Text, "HYROX MEN | Friday") {
+		t.Fatalf("want on-sale and Friday alerts, got %+v", *sent)
+	}
+	if strings.Contains((*sent)[1].Text, "CHARITY") {
+		t.Errorf("a race set up by hand wants the plain tickets only: %+v", (*sent)[1])
+	}
+}
+
+func TestBestShopPrefersTheRegionsSeasonShop(t *testing.T) {
+	singapore := []string{
+		"https://hyroxsingapore.com/event/hyrox-youngstars-singapore",
+		"https://singapore.hyrox.com/event/hyrox-singapore-ii-season-26-27-j5w6t2",
+	}
+	if got := bestShop(singapore, false); got != singapore[1] {
+		t.Errorf("Singapore: %s", got)
+	}
+	if got := bestShop(singapore, true); got != singapore[0] {
+		t.Errorf("Singapore Youngstars: %s", got)
+	}
+	minneapolis := []string{"https://presto.eventpipe.com/event/52143e08", "https://hyroxglobal.rosterfy.eu/event/x"}
+	if got := bestShop(minneapolis, false); got != "" {
+		t.Errorf("hotels and volunteers are no shop: %s", got)
+	}
+	if got := bestShop([]string{"https://india.hyrox.co.in/event/hyrox-gujarat-season-26-27-8yjjhs"}, false); got == "" {
+		t.Error("India's shop not taken")
+	}
+}

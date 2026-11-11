@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -112,7 +113,7 @@ func (s *Server) browse(w http.ResponseWriter, r *http.Request) {
 	}
 	shop, err := ShopURL(r.Context(), in.URL)
 	if err != nil {
-		fail(w, http.StatusBadRequest, err)
+		fail(w, http.StatusBadGateway, err)
 		return
 	}
 	page, err := s.shop.Browse(r.Context(), shop, in.Path)
@@ -121,6 +122,9 @@ func (s *Server) browse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page.URL = shop
+	if isRacePage(in.URL) {
+		page.RacePage = in.URL
+	}
 	reply(w, page)
 }
 
@@ -129,13 +133,18 @@ func (s *Server) addWatch(w http.ResponseWriter, r *http.Request) {
 	if !read(w, r, &in) {
 		return
 	}
-	if !strings.HasPrefix(in.URL, "https://") || len(in.Path) == 0 && len(in.Wanted) == 0 {
-		fail(w, http.StatusBadRequest, errors.New("choose an event and its tickets first"))
+	planned := in.Planned && isRacePage(in.RacePage) && len(in.Path) > 0
+	if !planned && (!strings.HasPrefix(in.URL, "https://") || len(in.Path) == 0 && len(in.Wanted) == 0) {
+		fail(w, http.StatusBadRequest, errors.New("choose a race and its tickets first"))
 		return
 	}
 	watch := &Watch{
-		ID: newID(), Event: in.Event, Dates: in.Dates, URL: in.URL, TicketsURL: in.TicketsURL, Path: in.Path, Steps: in.Steps,
-		Wanted: in.Wanted, Tickets: in.Tickets, Created: time.Now(),
+		ID: newID(), Event: in.Event, Dates: in.Dates, URL: in.URL, RacePage: in.RacePage, TicketsURL: in.TicketsURL,
+		Path: in.Path, Steps: in.Steps, Wanted: in.Wanted, Tickets: in.Tickets, Created: time.Now(),
+		Planned: planned, Days: in.Days, Waiting: planned,
+	}
+	if planned {
+		watch.URL, watch.Wanted, watch.Tickets = "", nil, nil
 	}
 	if err := s.store.Update(func(d *Data) error { d.Watches = append(d.Watches, watch); return nil }); err != nil {
 		fail(w, http.StatusInternalServerError, err)
@@ -148,8 +157,9 @@ func (s *Server) addWatch(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) changeWatch(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Paused *bool    `json:"paused"`
-		Wanted []string `json:"wanted"`
+		Paused   *bool    `json:"paused"`
+		Wanted   []string `json:"wanted"`
+		RacePage *string  `json:"racePage"`
 	}
 	if !read(w, r, &in) {
 		return
@@ -164,6 +174,9 @@ func (s *Server) changeWatch(w http.ResponseWriter, r *http.Request) {
 		}
 		if in.Wanted != nil {
 			watch.Wanted = in.Wanted
+		}
+		if in.RacePage != nil && (*in.RacePage == "" || isRacePage(*in.RacePage)) {
+			watch.RacePage = *in.RacePage
 		}
 		return nil
 	})
@@ -310,6 +323,12 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request) {
 }
 
 var errNotFound = errors.New("no such watch")
+
+// isRacePage says whether a link is to a race's page on hyrox.com.
+func isRacePage(link string) bool {
+	u, err := url.Parse(link)
+	return err == nil && u.Scheme == "https" && strings.TrimPrefix(u.Hostname(), "www.") == "hyrox.com" && strings.HasPrefix(u.Path, "/event/")
+}
 
 func read(w http.ResponseWriter, r *http.Request, into any) bool {
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(into); err != nil {

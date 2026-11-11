@@ -87,8 +87,8 @@
           <label for="event">Race</label>
           <select id="event" disabled><option>Loading races from Find my race…</option></select>
           <div class="row small">
-            <label class="check"><input type="checkbox" id="youth"> Youngstars races</label>
-            <label class="check"><input type="checkbox" id="all"> Races without tickets yet</label>
+            <label class="check"><input type="checkbox" id="youth" autocomplete="off"> Youngstars races</label>
+            <label class="check"><input type="checkbox" id="all" autocomplete="off"> Races without tickets yet</label>
           </div>
         </div>
         <details class="field">
@@ -107,6 +107,29 @@
           <ol id="w-path" class="chips"></ol>
           <div id="w-busy" class="now" hidden><span class="spinner"></span><div><b>Opening the ticket shop</b><span>about 20 seconds</span></div></div>
           <p id="w-error" class="error" hidden></p>
+          <div id="manual" class="manual" hidden>
+            <p class="muted" id="m-why">The shop isn't open yet. Set the race up with the choices every HYROX shop has: the radar waits, tells you when the shop opens, and from then on watches these tickets.</p>
+            <div class="grid">
+              <div class="field"><label for="m-cat">Category</label>
+                <select id="m-cat"><option>Singles</option><option>Doubles</option><option>Relay</option></select></div>
+              <div class="field" id="m-class-field"><label for="m-class">Class</label>
+                <select id="m-class"><option>Open</option><option>Pro</option></select></div>
+              <div class="field"><label for="m-gender">Gender</label>
+                <select id="m-gender"><option>Men</option><option>Women</option><option>Mixed</option></select></div>
+            </div>
+            <div class="field">
+              <label>Days</label>
+              <div class="row days">
+                <label class="check"><input type="checkbox" value="Thursday"> Thursday</label>
+                <label class="check"><input type="checkbox" value="Friday"> Friday</label>
+                <label class="check"><input type="checkbox" value="Saturday"> Saturday</label>
+                <label class="check"><input type="checkbox" value="Sunday"> Sunday</label>
+              </div>
+              <span class="muted small">None ticked: any day. Charity and adaptive tickets are left out.</span>
+            </div>
+            <button id="save-manual" class="btn big" type="button">Wait for the shop</button>
+          </div>
+          <button id="to-manual" class="btn ghost" type="button" hidden>Set it up by hand instead</button>
           <div id="w-options" class="choices"></div>
           <div id="w-tickets" hidden>
             <p class="muted">Tick the tickets you want — none ticked means any of them.</p>

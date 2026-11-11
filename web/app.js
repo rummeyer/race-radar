@@ -93,8 +93,16 @@ function renderLive() {
   $('live-text').textContent = next === null ? 'Live' : next < 60 ? `Live · next in ${next}s` : `Live · next in ${Math.round(next / 60)} min`;
 }
 
+/** As the radar decides it (Watch.Wants): the tickets ticked, else those of the days chosen. */
+function wants(w, name) {
+  if (w.wanted?.length) return w.wanted.includes(name);
+  const upper = name.toUpperCase();
+  if (w.planned && (upper.includes('CHARITY') || upper.includes('ADAPTIVE'))) return false;
+  return !w.days?.length || w.days.some((d) => upper.includes(d.toUpperCase()));
+}
+
 function wantedOf(w) {
-  return (w.tickets ?? []).filter((t) => !w.wanted?.length || w.wanted.includes(t.name));
+  return (w.tickets ?? []).filter((t) => wants(w, t.name));
 }
 
 function renderStats() {
@@ -113,20 +121,21 @@ function renderWatches() {
   box.replaceChildren(...state.watches.map((w) => {
     const wanted = wantedOf(w);
     const open = wanted.some((t) => t.available);
-    const status = w.paused ? tag('Paused') : w.error ? tag('Check failing', 'bad') : open ? tag('Available', 'ok') : never(w.checked) ? tag('First check…', 'wait') : tag('Sold out');
+    const status = w.paused ? tag('Paused') : w.error ? tag('Check failing', 'bad') : w.waiting ? tag('Not on sale yet', 'wait')
+      : open ? tag('Available', 'ok') : never(w.checked) ? tag('First check…', 'wait') : tag('Sold out');
     const running = state.running?.subject === w.event;
     const shop = w.ticketsUrl || w.url;
     const title = el('a', 'race-link', w.event || 'Race');
-    title.href = shop;
+    title.href = w.racePage || shop;
     title.target = '_blank';
     title.rel = 'noopener';
-    title.title = 'Open the ticket shop';
+    title.title = w.racePage ? 'Open the race page' : 'Open the ticket shop';
     const top = el('div', 'race-top',
       el('div', '',
         el('h3', '', title),
         el('div', 'meta', status, w.dates && el('span', '', w.dates), el('span', '', running ? 'checking now…' : `checked ${ago(w.checked)}`))),
       el('div', 'race-actions',
-        shopLink(shop),
+        shop && shopLink(shop),
         button('Check now', 'text', async (b) => {
           b.textContent = 'Checking…';
           b.disabled = true;
@@ -143,9 +152,13 @@ function renderWatches() {
           refresh();
         })));
     const steps = w.steps?.length ? w.steps : (w.path ?? []).map((value) => ({ value }));
-    const chips = el('ol', 'chips', ...steps.map((s) => el('li', '', s.label && el('span', 'lbl', s.label), s.value)));
+    const days = w.days?.length ? [el('li', '', el('span', 'lbl', 'Days'), w.days.map((d) => d.slice(0, 3)).join(' · '))] : [];
+    const chips = el('ol', 'chips', ...steps.map((s) => el('li', '', s.label && el('span', 'lbl', s.label), s.value)), ...days);
     const shown = wanted.length ? wanted : (w.wanted ?? []).map((name) => ({ name, unseen: true }));
-    const list = el('ul', 'tickets', ...shown.map((t) =>
+    if (!shown.length && w.planned) {
+      shown.push({ name: w.waiting ? 'Tickets show here once the shop opens' : 'None of these tickets listed', unseen: true, note: true });
+    }
+    const list = el('ul', 'tickets', ...shown.map((t) => t.note ? el('li', 'ticket note', el('span', 'muted', t.name)) :
       el('li', `ticket ${t.available ? 'available' : ''}`,
         el('span', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price)),
         t.available ? buyLink(shop) : tag(t.unseen ? 'Not listed' : 'Sold out'))));
@@ -217,7 +230,7 @@ function renderLog() {
 // ── Adding a race ──────────────────────────────────────────────────────────
 
 let events = [];
-const wizard = { url: '', path: [], page: null };
+const wizard = { url: '', path: [], page: null, event: null };
 
 async function loadEvents() {
   try {
@@ -253,44 +266,119 @@ function renderEvents() {
   select.disabled = false;
 }
 
+// A box the browser ticks again on reloading is not told of: the list follows the boxes whenever
+// it is shown, not only when they change.
 $('youth').addEventListener('change', renderEvents);
 $('all').addEventListener('change', renderEvents);
+window.addEventListener('pageshow', () => events.length && renderEvents());
 $('event').addEventListener('change', () => {
-  if ($('event').value) start($('event').value);
+  const url = $('event').value;
+  if (url) start(url, events.find((e) => e.url === url));
 });
 $('open-link').addEventListener('click', () => {
-  if ($('link').value.trim()) start($('link').value.trim());
+  const url = $('link').value.trim();
+  if (url) start(url, events.find((e) => e.url.replace(/\/$/, '') === url.replace(/\/$/, '')));
 });
 
-function start(url) {
+function start(url, event) {
   wizard.url = url;
   wizard.path = [];
   wizard.page = null;
+  wizard.event = event || null;
+  wizard.racePage = event?.url || (/^https:\/\/(www\.)?hyrox\.com\/event\//.test(url) ? url : '');
   $('wizard').hidden = false;
-  $('w-title').textContent = '';
-  $('w-dates').textContent = '';
+  $('manual').hidden = true;
+  $('to-manual').hidden = true;
+  $('w-title').textContent = event?.name || '';
+  $('w-dates').textContent = event?.dates || '';
+  $('w-path').replaceChildren();
+  // No tickets on sale yet, as Find my race says: set up by hand at once.
+  if (event && !event.onSale) {
+    showManual('No tickets on sale for this race yet.');
+    return;
+  }
   browse();
+}
+
+function showManual(why) {
+  $('w-busy').hidden = true;
+  $('w-options').replaceChildren();
+  $('w-tickets').hidden = true;
+  $('to-manual').hidden = true;
+  $('m-why').firstChild.textContent = `${why} Set the race up with the choices every HYROX shop has: the radar waits, tells you when the shop opens, and from then on watches these tickets.`;
+  $('manual').hidden = !wizard.racePage;
+  if (!wizard.racePage) {
+    $('w-error').textContent = 'To set a race up by hand, choose it from the list: the radar finds its shop on its race page.';
+    $('w-error').hidden = false;
+  }
+  syncManual();
+}
+
+/** As HYROX's shops have it: Pro for Singles and Doubles only, Mixed for Doubles and Relay. */
+function syncManual() {
+  const cat = $('m-cat').value;
+  const pro = $('m-class').querySelector('option:last-child');
+  pro.disabled = cat === 'Relay';
+  if (pro.disabled && $('m-class').value === 'Pro') $('m-class').value = 'Open';
+  const mixed = $('m-gender').querySelector('option:last-child');
+  mixed.disabled = cat === 'Singles';
+  if (mixed.disabled && $('m-gender').value === 'Mixed') $('m-gender').value = 'Men';
+}
+$('m-cat').addEventListener('change', syncManual);
+$('to-manual').addEventListener('click', () => showManual('Not the right tickets, or the shop not open yet?'));
+
+$('save-manual').addEventListener('click', async () => {
+  const cat = $('m-cat').value;
+  const steps = [
+    { label: 'Category', value: cat },
+    { label: 'Class', value: $('m-class').value },
+    { label: 'Gender', value: $('m-gender').value },
+  ];
+  const days = [...document.querySelectorAll('.days input:checked')].map((b) => b.value);
+  try {
+    await api('POST', '/api/watches', {
+      planned: true, racePage: wizard.racePage,
+      event: wizard.event?.name || $('w-title').textContent || 'Race', dates: wizard.event?.dates || '',
+      path: steps.map((s) => s.value), steps, days,
+    });
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
+  done();
+});
+
+function done() {
+  $('wizard').hidden = true;
+  $('event').value = '';
+  location.hash = '#dashboard';
+  refresh();
 }
 
 async function browse() {
   $('w-busy').hidden = false;
   $('w-error').hidden = true;
+  $('manual').hidden = true;
+  $('to-manual').hidden = true;
   $('w-options').replaceChildren();
   $('w-tickets').hidden = true;
   renderPath();
   try {
     wizard.page = await api('POST', '/api/browse', { url: wizard.url, path: wizard.path });
     wizard.url = wizard.page.url;
+    if (wizard.page.racePage) wizard.racePage = wizard.page.racePage;
   } catch (err) {
     $('w-error').textContent = err.message;
     $('w-error').hidden = false;
+    if (wizard.racePage) $('to-manual').hidden = false;
     return;
   } finally {
     $('w-busy').hidden = true;
   }
   const page = wizard.page;
-  $('w-title').textContent = page.title;
-  $('w-dates').textContent = page.dates;
+  $('w-title').textContent = wizard.event?.name || page.title;
+  $('w-dates').textContent = wizard.event?.dates || page.dates;
+  $('to-manual').hidden = !wizard.racePage;
   renderPath();
   if (page.tickets.length) {
     $('w-list').replaceChildren(...page.tickets.map((t, i) => {
@@ -330,17 +418,15 @@ $('save-watch').addEventListener('click', async () => {
   const wanted = [...$('w-list').querySelectorAll('input:checked')].map((b) => b.value);
   try {
     await api('POST', '/api/watches', {
-      event: page.title, dates: page.dates, url: wizard.url, ticketsUrl: page.ticketsUrl, path: wizard.path,
+      event: wizard.event?.name || page.title, dates: wizard.event?.dates || page.dates,
+      url: wizard.url, racePage: wizard.racePage, ticketsUrl: page.ticketsUrl, path: wizard.path,
       steps: page.steps, wanted, tickets: page.tickets,
     });
   } catch (err) {
     alert(err.message);
     return;
   }
-  $('wizard').hidden = true;
-  $('event').value = '';
-  location.hash = '#dashboard';
-  refresh();
+  done();
 });
 
 // ── Settings ───────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -44,6 +45,13 @@ type Watch struct {
 	Event string `json:"event"`
 	Dates string `json:"dates"`
 	URL   string `json:"url"`
+	// The race's page on hyrox.com, where its shop is found once there is one.
+	RacePage string `json:"racePage,omitempty"`
+	// Set up by hand while the shop was not open: the choices as HYROX's shops have them, and the
+	// days wanted. Waiting while the shop is not open yet.
+	Planned bool     `json:"planned,omitempty"`
+	Days    []string `json:"days,omitempty"`
+	Waiting bool     `json:"waiting,omitempty"`
 	// The shop's tickets page, opening at the first choice; where links and alerts go.
 	TicketsURL string    `json:"ticketsUrl,omitempty"`
 	Path       []string  `json:"path"`
@@ -70,7 +78,23 @@ func (w *Watch) Shop() string {
 
 // Wants says whether a ticket is one the watch is for.
 func (w *Watch) Wants(name string) bool {
-	return len(w.Wanted) == 0 || contains(w.Wanted, name)
+	if len(w.Wanted) > 0 {
+		return contains(w.Wanted, name)
+	}
+	upper := strings.ToUpper(name)
+	// Set up by hand: the plain tickets of the choices, not their charity or adaptive ones.
+	if w.Planned && (strings.Contains(upper, "CHARITY") || strings.Contains(upper, "ADAPTIVE")) {
+		return false
+	}
+	if len(w.Days) == 0 {
+		return true
+	}
+	for _, day := range w.Days {
+		if strings.Contains(upper, strings.ToUpper(day)) {
+			return true
+		}
+	}
+	return false
 }
 
 // Search waits for races on Find my race whose name contains a text, "Berlin" say: it tells

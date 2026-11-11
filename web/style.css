@@ -256,3 +256,8 @@ a.shop {
   color: var(--yellow); text-decoration: none; padding: 8px 10px; align-self: center;
 }
 a.shop:hover { text-decoration: underline; }
+
+.manual { border: 1px solid var(--line); padding: 16px; margin: 12px 0; background: var(--surface-2); }
+.manual .btn { margin-top: 16px; }
+#to-manual { margin-top: 12px; }
+.ticket.note { border-style: dashed; background: none; }

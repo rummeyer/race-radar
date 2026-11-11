@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -23,10 +24,12 @@ type Radar struct {
 	store  *Store
 	shop   Browser
 	events EventLister
-	send   func(context.Context, Settings, Message) error
-	log    *Activity
-	wake   chan struct{}
-	busy   sync.Mutex
+	// findShop finds a race's shop on its page; tests stand in for it.
+	findShop func(context.Context, string) (string, error)
+	send     func(context.Context, Settings, Message) error
+	log      *Activity
+	wake     chan struct{}
+	busy     sync.Mutex
 	// When the current round started and the next is due, for the page.
 	mu   sync.Mutex
 	next time.Time
@@ -38,7 +41,7 @@ type EventLister interface {
 }
 
 func NewRadar(store *Store, shop Browser, events EventLister) *Radar {
-	return &Radar{store: store, shop: shop, events: events, send: Notify, log: NewActivity(), wake: make(chan struct{}, 1)}
+	return &Radar{store: store, shop: shop, events: events, findShop: ShopURL, send: Notify, log: NewActivity(), wake: make(chan struct{}, 1)}
 }
 
 // Run checks all watches, then waits the interval, until ctx is done.
@@ -99,7 +102,7 @@ func (r *Radar) Check(ctx context.Context, id string) {
 	}
 	r.log.Start(w.Event)
 	started := time.Now()
-	page, err := r.shop.Browse(ctx, w.URL, w.Path)
+	page, err := r.browse(ctx, w)
 	r.log.Stop()
 	if err == nil && len(page.Tickets) == 0 {
 		err = fmt.Errorf("the shop lists no tickets after %s", strings.Join(w.Path, " › "))
@@ -116,12 +119,42 @@ func (r *Radar) Check(ctx context.Context, id string) {
 		return nil
 	})
 	took := time.Since(started).Seconds()
-	if err != nil {
+	if errors.Is(err, errNotOnSale) {
+		r.log.Add(Entry{Kind: "check", Subject: w.Event, Text: "tickets not on sale yet", Seconds: took})
+	} else if err != nil {
 		r.log.Add(Entry{Kind: "error", Subject: w.Event, Text: err.Error(), Seconds: took})
 	} else {
 		r.log.Add(Entry{Kind: "check", Subject: w.Event, Text: seen, Seconds: took})
 	}
 	r.notify(ctx, data.Settings, w.Event, messages)
+}
+
+// errNotOnSale is a race set up by hand whose shop is not open yet: no news, and no failure.
+var errNotOnSale = errors.New("tickets not on sale yet")
+
+// browse opens the watch's shop: for one set up by hand, found on the race's page first, and
+// not open yet rather than broken while it cannot be.
+func (r *Radar) browse(ctx context.Context, w *Watch) (*Page, error) {
+	shop := w.URL
+	if w.Planned && shop == "" {
+		found, err := r.findShop(ctx, w.RacePage)
+		if err != nil {
+			if errors.Is(err, ErrNoShop) {
+				return nil, errNotOnSale
+			}
+			return nil, err
+		}
+		shop = found
+	}
+	page, err := r.shop.Browse(ctx, shop, w.Path)
+	if err != nil && w.Planned && page == nil {
+		// No Buy Tickets, or neither choices nor tickets: the shop is there but not selling.
+		return nil, errNotOnSale
+	}
+	if page != nil {
+		page.URL = shop
+	}
+	return page, err
 }
 
 // notify sends each message, and logs it as sent or not.
@@ -140,6 +173,10 @@ func (r *Radar) notify(ctx context.Context, settings Settings, subject string, m
 // a watch that broke, or one that works again.
 func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message {
 	w.Checked = now
+	if errors.Is(err, errNotOnSale) {
+		w.Waiting, w.Error, w.Failures = true, "", 0
+		return nil
+	}
 	if err != nil {
 		w.Error = err.Error()
 		w.Failures++
@@ -154,6 +191,16 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		return nil
 	}
 	var messages []Message
+	if w.Planned && (w.Waiting || w.URL == "") {
+		w.Waiting = false
+		messages = append(messages, Message{
+			Title: "Tickets on sale: " + w.Event, Text: "The shop is open: " + strings.Join(w.Path, " › ") + ".",
+			URL: firstOf(page.TicketsURL, page.URL), URLTitle: "Open ticket shop", Priority: 1,
+		})
+	}
+	if page.URL != "" && w.URL == "" {
+		w.URL = page.URL
+	}
 	if w.Failures >= brokenAfter {
 		messages = append(messages, Message{Title: "HYROX Radar: works again", Text: w.Event + " can be checked again."})
 	}
@@ -172,10 +219,11 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		}
 	}
 	w.Tickets, w.Error, w.Failures = page.Tickets, "", 0
-	if page.Title != "" {
+	// Find my race's name and dates, where it gave them, read better than the shop's.
+	if w.Event == "" {
 		w.Event = page.Title
 	}
-	if page.Dates != "" {
+	if w.Dates == "" {
 		w.Dates = page.Dates
 	}
 	if page.TicketsURL != "" {
@@ -256,6 +304,15 @@ func searched(s *Search, events []Event, now time.Time) []Message {
 		}
 	}
 	return messages
+}
+
+func firstOf(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // summary is "HYROX MEN | Friday sold out, HYROX MEN | Saturday available", of the wanted tickets.

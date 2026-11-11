@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 — 2026-11-11
+
+- Every region's shop: the classic checkout too, as the DACH, Spanish and other shops have it,
+  and shops whose choices carry a status badge (Korea, China, Benelux, Australia).
+- A race's shop is found among its page's links by preference for the region's shop and the
+  season's event, passing over hotel, volunteer and local Youngstars links (Singapore, Hong Kong,
+  Minneapolis).
+- Races set up by hand before their shop opens: category, class, gender and days. They wait
+  quietly, tell when the shop opens, and are watched from then on.
+- A race's name links to its page on hyrox.com, *Open shop* to its ticket shop.
+- The *Races without tickets yet* box works when the browser ticks it again on reloading.
+
 ## 1.1.0 — 2026-11-11
 
 - Every race on the dashboard links to its ticket shop, sold out or not: its name and an
