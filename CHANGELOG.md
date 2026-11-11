@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 — 2026-11-11
+
+- Every race on the dashboard links to its ticket shop, sold out or not: its name and an
+  *Open shop* button. Alerts and *Buy now* open the shop's tickets page, a click shorter than
+  the event's.
+- Waiting for a race takes plain text: `Berlin` finds every race whose name contains it, any
+  case. No `*` needed; one typed anyway is ignored.
+
 ## 1.0.0 — 2026-11-11
 
 - Watches HYROX ticket shops for sold-out tickets coming back, by opening them in headless

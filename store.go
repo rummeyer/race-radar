@@ -40,15 +40,17 @@ type Settings struct {
 // Watch is one event's tickets being watched: the shop, the choices that lead to the tickets,
 // and which of them are wanted (none: any of them). It also keeps what was seen last.
 type Watch struct {
-	ID      string    `json:"id"`
-	Event   string    `json:"event"`
-	Dates   string    `json:"dates"`
-	URL     string    `json:"url"`
-	Path    []string  `json:"path"`
-	Steps   []Step    `json:"steps"`
-	Wanted  []string  `json:"wanted"`
-	Paused  bool      `json:"paused"`
-	Created time.Time `json:"created"`
+	ID    string `json:"id"`
+	Event string `json:"event"`
+	Dates string `json:"dates"`
+	URL   string `json:"url"`
+	// The shop's tickets page, opening at the first choice; where links and alerts go.
+	TicketsURL string    `json:"ticketsUrl,omitempty"`
+	Path       []string  `json:"path"`
+	Steps      []Step    `json:"steps"`
+	Wanted     []string  `json:"wanted"`
+	Paused     bool      `json:"paused"`
+	Created    time.Time `json:"created"`
 
 	Checked  time.Time `json:"checked,omitzero"`
 	Tickets  []Ticket  `json:"tickets"`
@@ -58,12 +60,20 @@ type Watch struct {
 	Seen map[string]time.Time `json:"seen,omitempty"`
 }
 
+// Shop is the quickest way into the shop: its tickets page, else the event's.
+func (w *Watch) Shop() string {
+	if w.TicketsURL != "" {
+		return w.TicketsURL
+	}
+	return w.URL
+}
+
 // Wants says whether a ticket is one the watch is for.
 func (w *Watch) Wants(name string) bool {
 	return len(w.Wanted) == 0 || contains(w.Wanted, name)
 }
 
-// Search waits for races on Find my race whose name matches a pattern, "*Berlin*" say: it tells
+// Search waits for races on Find my race whose name contains a text, "Berlin" say: it tells
 // of one that appears, and of one whose tickets go on sale. Known keeps the races seen so far,
 // and whether their tickets were on sale, so that the races there already when it was added are
 // not news.

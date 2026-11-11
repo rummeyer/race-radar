@@ -1,6 +1,6 @@
 # HYROX Radar
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.25+-00ADD8.svg)](https://go.dev)
 
@@ -19,7 +19,7 @@ Raspberry Pi or any Linux box:
 |---|---|
 | 🎯 **Any race, any ticket** | Pick the race from HYROX's *Find my race*, make the same choices as in its shop — Singles › Open › Men — and tick the tickets you want: Friday, Saturday, or any of them. |
 | 🔔 **Told at once** | Pushover (all your devices, or just one) and email. Once per ticket coming back, not every few minutes while it lasts. |
-| 🗓️ **Races not announced yet** | Wait for `*Berlin*`: you're told when a race whose name fits shows up, and again when its tickets go on sale. |
+| 🗓️ **Races not announced yet** | Wait for `Berlin`: you're told when a race whose name contains it shows up, and again when its tickets go on sale. |
 | 📡 **A dashboard** | What is watched, what is sold out or available, what is being checked right now, when the next round is, and a live log. |
 | 🛟 **Tells you when it breaks** | Three failed checks in a row — the shop changed, the race is gone — and you get told, and again once it works. |
 
@@ -86,9 +86,9 @@ journalctl -u hyrox-radar -f         # what it is doing
    *Start watching*. None ticked means any of them.
 3. **Dashboard** — your races with their tickets. *Check now* looks at once, *Pause* stops
    watching for a while.
-4. **Waiting for a race** — enter a name with `*` for anything: `*Berlin*`, `*Hamburg*`,
-   `*Miami*`. Races there already when you add it are not news; a new one is, and so is its
-   tickets going on sale.
+4. **Waiting for a race** — enter part of its name: `Berlin`, `Hamburg`, `Miami`, any case.
+   Races there already when you add it are not news; a new one is, and so is its tickets going
+   on sale.
 
 <p align="center"><img src="docs/phone.png" alt="The dashboard on a phone" width="300"></p>
 
@@ -100,7 +100,9 @@ journalctl -u hyrox-radar -f         # what it is doing
 > *Open ticket shop*
 
 Pushover alerts are sent with high priority, so they come through quiet hours. Tap the link,
-pick the ticket, pay — returned tickets go fast.
+pick the ticket, pay — returned tickets go fast. The link opens the shop's tickets page, one click
+shorter than the event's. On the dashboard every race links to its shop too, sold out or not, to
+see for yourself.
 
 ## Good to know
 

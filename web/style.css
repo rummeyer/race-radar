@@ -247,3 +247,12 @@ footer { max-width: 1180px; margin: 0 auto; padding: 24px 16px 40px; border-top:
   .steps-guide { grid-template-columns: 1fr; }
   .stat .num { font-size: 38px; }
 }
+
+.race-link { text-decoration: none; }
+.race-link:hover { color: var(--yellow); }
+.race-link::after { content: " ↗"; font-size: 0.6em; color: var(--muted); vertical-align: 0.3em; }
+a.shop {
+  font: 800 15px/1 var(--display); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--yellow); text-decoration: none; padding: 8px 10px; align-self: center;
+}
+a.shop:hover { text-decoration: underline; }

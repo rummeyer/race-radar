@@ -115,11 +115,18 @@ function renderWatches() {
     const open = wanted.some((t) => t.available);
     const status = w.paused ? tag('Paused') : w.error ? tag('Check failing', 'bad') : open ? tag('Available', 'ok') : never(w.checked) ? tag('First check…', 'wait') : tag('Sold out');
     const running = state.running?.subject === w.event;
+    const shop = w.ticketsUrl || w.url;
+    const title = el('a', 'race-link', w.event || 'Race');
+    title.href = shop;
+    title.target = '_blank';
+    title.rel = 'noopener';
+    title.title = 'Open the ticket shop';
     const top = el('div', 'race-top',
       el('div', '',
-        el('h3', '', w.event || 'Race'),
+        el('h3', '', title),
         el('div', 'meta', status, w.dates && el('span', '', w.dates), el('span', '', running ? 'checking now…' : `checked ${ago(w.checked)}`))),
       el('div', 'race-actions',
+        shopLink(shop),
         button('Check now', 'text', async (b) => {
           b.textContent = 'Checking…';
           b.disabled = true;
@@ -141,10 +148,18 @@ function renderWatches() {
     const list = el('ul', 'tickets', ...shown.map((t) =>
       el('li', `ticket ${t.available ? 'available' : ''}`,
         el('span', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price)),
-        t.available ? buyLink(w.url) : tag(t.unseen ? 'Not listed' : 'Sold out'))));
+        t.available ? buyLink(shop) : tag(t.unseen ? 'Not listed' : 'Sold out'))));
     const classes = ['race', open && 'open', w.error && 'failing', w.paused && 'paused'].filter(Boolean).join(' ');
     return el('article', classes, top, chips, list, w.error && el('p', 'error', w.error));
   }));
+}
+
+function shopLink(href) {
+  const a = el('a', 'shop', 'Open shop ↗');
+  a.href = href;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  return a;
 }
 
 function buyLink(href) {
@@ -315,7 +330,7 @@ $('save-watch').addEventListener('click', async () => {
   const wanted = [...$('w-list').querySelectorAll('input:checked')].map((b) => b.value);
   try {
     await api('POST', '/api/watches', {
-      event: page.title, dates: page.dates, url: wizard.url, path: wizard.path,
+      event: page.title, dates: page.dates, url: wizard.url, ticketsUrl: page.ticketsUrl, path: wizard.path,
       steps: page.steps, wanted, tickets: page.tickets,
     });
   } catch (err) {

@@ -24,7 +24,7 @@ type fakeEvents []Event
 func (f fakeEvents) List(context.Context) ([]Event, error) { return f, nil }
 
 func tickets(friday, saturday bool) *Page {
-	return &Page{Title: "Sweatpals HYROX Miami Beach", Tickets: []Ticket{
+	return &Page{Title: "Sweatpals HYROX Miami Beach", TicketsURL: "https://shop/tickets/1", Tickets: []Ticket{
 		{Name: "HYROX MEN | Friday", Available: friday, Price: "$218.33"},
 		{Name: "HYROX MEN | Saturday", Available: saturday, Price: "$218.33"},
 		{Name: "CHARITY: RACE FOR IMPACT | HYROX MEN | Friday", Available: true, Price: "$173.60"},
@@ -60,8 +60,8 @@ func TestTellsOnceWhenAWantedTicketComesBack(t *testing.T) {
 	if len(*sent) != 1 || !strings.Contains((*sent)[0].Text, "HYROX MEN | Friday $218.33") || strings.Contains((*sent)[0].Text, "Saturday") {
 		t.Fatalf("want one alert for Friday only, got %+v", *sent)
 	}
-	if (*sent)[0].Priority != 1 || (*sent)[0].URL != "https://shop/event/x" {
-		t.Errorf("alert should be high priority with the shop's link: %+v", (*sent)[0])
+	if (*sent)[0].Priority != 1 || (*sent)[0].URL != "https://shop/tickets/1" {
+		t.Errorf("alert should be high priority with the shop's tickets page: %+v", (*sent)[0])
 	}
 	r.Check(ctx, id)
 	if len(*sent) != 1 {
@@ -101,7 +101,7 @@ func TestTellsOfABrokenCheckOnceAndOfItsRecovery(t *testing.T) {
 
 func TestSearchTakesNoteFirstThenTellsOfNewRacesAndSales(t *testing.T) {
 	berlin26 := Event{Name: "HYROX Berlin", URL: "https://hyrox.com/event/berlin-26/", Dates: "1. May. 2026", OnSale: true}
-	s := &Search{Pattern: "*Berlin*"}
+	s := &Search{Pattern: "Berlin"}
 	if got := searched(s, []Event{berlin26}, time.Now()); len(got) != 0 {
 		t.Fatalf("what is there when added is not news: %+v", got)
 	}
@@ -123,8 +123,8 @@ func TestSearchTakesNoteFirstThenTellsOfNewRacesAndSales(t *testing.T) {
 func TestMatches(t *testing.T) {
 	berlin := Event{Name: "AIA HYROX Berlin", City: "BER"}
 	for pattern, want := range map[string]bool{
-		"*Berlin*": true, "berlin": true, "*berlin": true, "Berlin*": false, "ber": true, "BER": true,
-		"*Hamburg*": false, "": false, "AIA*": true,
+		"Berlin": true, "berlin": true, "*Berlin*": true, "Berlin*": true, "ber": true, "AIA HYROX": true,
+		"Hamburg": false, "": false, "*": false,
 	} {
 		if Matches(pattern, berlin) != want {
 			t.Errorf("Matches(%q) = %v, want %v", pattern, !want, want)

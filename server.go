@@ -134,7 +134,7 @@ func (s *Server) addWatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	watch := &Watch{
-		ID: newID(), Event: in.Event, Dates: in.Dates, URL: in.URL, Path: in.Path, Steps: in.Steps,
+		ID: newID(), Event: in.Event, Dates: in.Dates, URL: in.URL, TicketsURL: in.TicketsURL, Path: in.Path, Steps: in.Steps,
 		Wanted: in.Wanted, Tickets: in.Tickets, Created: time.Now(),
 	}
 	if err := s.store.Update(func(d *Data) error { d.Watches = append(d.Watches, watch); return nil }); err != nil {
@@ -201,7 +201,7 @@ func (s *Server) addSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	pattern := strings.TrimSpace(in.Pattern)
 	if strings.Trim(pattern, "* ") == "" {
-		fail(w, http.StatusBadRequest, errors.New("enter a name to look for, *Berlin* say"))
+		fail(w, http.StatusBadRequest, errors.New("enter a name to look for, Berlin say"))
 		return
 	}
 	search := &Search{ID: newID(), Pattern: pattern, Created: time.Now()}

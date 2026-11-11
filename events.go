@@ -87,22 +87,14 @@ func parseDate(s string) time.Time {
 	return time.Time{}
 }
 
-// Matches says whether an event's name or city code fits a pattern: * stands for anything, and
-// without one the pattern may be anywhere in the name. Case does not matter.
-func Matches(pattern string, e Event) bool {
-	pattern = strings.ToLower(strings.TrimSpace(pattern))
-	if pattern == "" {
+// Matches says whether a race's name or city code contains the text looked for, case aside.
+// Asterisks are left out: "*Berlin*" is "Berlin".
+func Matches(text string, e Event) bool {
+	text = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(text, "*", "")))
+	if text == "" {
 		return false
 	}
-	if !strings.Contains(pattern, "*") {
-		pattern = "*" + pattern + "*"
-	}
-	quoted := strings.ReplaceAll(regexp.QuoteMeta(pattern), `\*`, ".*")
-	re, err := regexp.Compile("^" + quoted + "$")
-	if err != nil {
-		return false
-	}
-	return re.MatchString(strings.ToLower(e.Name)) || re.MatchString(strings.ToLower(e.City))
+	return strings.Contains(strings.ToLower(e.Name), text) || strings.Contains(strings.ToLower(e.City), text)
 }
 
 // Events keeps Find my race's list for half an hour: it changes with new events, not by the minute.

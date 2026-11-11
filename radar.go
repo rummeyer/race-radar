@@ -148,7 +148,7 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 			return []Message{{
 				Title: "HYROX Radar: check broken",
 				Text:  fmt.Sprintf("%s failed %d times in a row: %s", w.Event, brokenAfter, err),
-				URL:   w.URL, URLTitle: "Open ticket shop",
+				URL:   w.Shop(), URLTitle: "Open ticket shop",
 			}}
 		}
 		return nil
@@ -178,12 +178,15 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 	if page.Dates != "" {
 		w.Dates = page.Dates
 	}
+	if page.TicketsURL != "" {
+		w.TicketsURL = page.TicketsURL
+	}
 	log.Printf("%s: %s", w.Event, summary(w))
 	if len(fresh) > 0 {
 		messages = append(messages, Message{
 			Title:    "Tickets available: " + w.Event,
 			Text:     strings.Join(fresh, "\n") + "\nBe quick.",
-			URL:      w.URL,
+			URL:      w.Shop(),
 			URLTitle: "Open ticket shop",
 			Priority: 1,
 		})

@@ -31,12 +31,15 @@ type Ticket struct {
 
 // Page is what the shop shows after the given choices: the next step's options, or the tickets.
 type Page struct {
-	URL     string   `json:"url"`
-	Title   string   `json:"title"`
-	Dates   string   `json:"dates"`
-	Steps   []Step   `json:"steps"`
-	Options []string `json:"options"`
-	Tickets []Ticket `json:"tickets"`
+	URL string `json:"url"`
+	// The shop's own page of the event's tickets, which opens at the first choice: a click
+	// shorter than the event's page.
+	TicketsURL string   `json:"ticketsUrl"`
+	Title      string   `json:"title"`
+	Dates      string   `json:"dates"`
+	Steps      []Step   `json:"steps"`
+	Options    []string `json:"options"`
+	Tickets    []Ticket `json:"tickets"`
 }
 
 // Shop opens HYROX ticket shops in headless Chromium, as a visitor would. One page at a time:
@@ -131,6 +134,9 @@ func (s *Shop) Browse(parent context.Context, event string, path []string) (*Pag
 		if err != nil {
 			return nil, fmt.Errorf("nothing came after choosing %q", choice)
 		}
+	}
+	if strings.Contains(page.URL, "/tickets/") {
+		page.TicketsURL = strings.Split(page.URL, "?")[0]
 	}
 	return page, nil
 }
