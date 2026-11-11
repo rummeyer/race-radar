@@ -49,7 +49,7 @@ func (e Email) Send(m Message) error {
 		body += "\n\n" + m.URLTitle + ": " + m.URL
 	}
 	msg := strings.Join([]string{
-		"From: HYROX Radar <" + from + ">",
+		"From: Race Radar <" + from + ">",
 		"To: " + strings.Join(to, ", "),
 		"Subject: " + mime.QEncoding.Encode("utf-8", m.Title),
 		"Date: " + time.Now().Format(time.RFC1123Z),

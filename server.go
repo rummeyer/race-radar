@@ -305,7 +305,7 @@ func (s *Server) devices(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) testNotification(w http.ResponseWriter, r *http.Request) {
 	settings := s.store.Read().Settings
-	m := Message{Title: "HYROX Radar: test", Text: "This is how a ticket alert arrives.", URL: FindMyRace, URLTitle: "Find my race"}
+	m := Message{Title: "Race Radar: test", Text: "This is how a ticket alert arrives.", URL: FindMyRace, URLTitle: "Find my race"}
 	var err error
 	switch r.PathValue("channel") {
 	case "pushover":

@@ -306,7 +306,7 @@ func ShopURL(ctx context.Context, link string) (string, error) {
 		return u.String(), nil
 	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux aarch64) hyrox-radar")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux aarch64) race-radar")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("opening the event page: %w", err)

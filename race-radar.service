@@ -1,0 +1,16 @@
+# systemd unit for race-radar. Install with:
+#   sudo cp race-radar.service /etc/systemd/system/
+#   sudo systemctl enable --now race-radar
+[Unit]
+Description=Race Radar: ticket watch with a dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+ExecStart=/usr/local/bin/race-radar -listen :8590
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

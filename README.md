@@ -1,15 +1,15 @@
-# HYROX Radar
+# Race Radar
 
 [![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.25+-00ADD8.svg)](https://go.dev)
 
 **Never miss a start line.** Your race sold out? Tickets come back — people get injured, swap
-days, change plans — and they're gone again within minutes. HYROX Radar watches the ticket shops
+days, change plans — and they're gone again within minutes. Race Radar watches the ticket shops
 for you and sends a notification the moment the ticket you want can be bought.
 
 <p align="center">
-  <img src="docs/dashboard.png" alt="HYROX Radar's dashboard: Miami Beach watched with its Open Men tickets sold out, New York set up by hand and not on sale yet, a live log of the checks, and a search waiting for a Berlin race" width="820">
+  <img src="docs/dashboard.png" alt="Race Radar's dashboard: Miami Beach watched with its Open Men tickets sold out, New York set up by hand and not on sale yet, a live log of the checks, and a search waiting for a Berlin race" width="820">
 </p>
 
 One small Go program with a dashboard in the browser, made to run around the clock on a
@@ -35,7 +35,7 @@ Raspberry Pi or any Linux box:
    (vivenu, per region)   headless   every ticket listed: available or not, and its price
                                          │
                                          ▼
-                                   hyrox-radar ── a ticket you want came back? ──► Pushover
+                                   race-radar ── a ticket you want came back? ──► Pushover
                                    :8590 dashboard                                 Email
 ```
 
@@ -57,21 +57,21 @@ You need Go 1.25 or newer to build it, and Chromium (or Chrome) where it runs.
 
 ```sh
 sudo apt install chromium            # Raspberry Pi OS, Debian, Ubuntu
-go install github.com/rummeyer/hyrox-radar@latest
-hyrox-radar                          # dashboard on http://<this machine>:8590
+go install github.com/rummeyer/race-radar@latest
+race-radar                          # dashboard on http://<this machine>:8590
 ```
 
-Or from a clone: `go build && ./hyrox-radar`.
+Or from a clone: `go build && ./race-radar`.
 
 ### Run it as a service
 
-[`hyrox-radar.service`](hyrox-radar.service) keeps it running and starts it at boot. Set `User=`
+[`race-radar.service`](race-radar.service) keeps it running and starts it at boot. Set `User=`
 to yours and `ExecStart=` to where the binary is, then:
 
 ```sh
-sudo cp hyrox-radar.service /etc/systemd/system/
-sudo systemctl enable --now hyrox-radar
-journalctl -u hyrox-radar -f         # what it is doing
+sudo cp race-radar.service /etc/systemd/system/
+sudo systemctl enable --now race-radar
+journalctl -u race-radar -f         # what it is doing
 ```
 
 ### Options
@@ -79,7 +79,7 @@ journalctl -u hyrox-radar -f         # what it is doing
 | Flag | Default | |
 |---|---|---|
 | `-listen` | `:8590` | Address of the dashboard |
-| `-data` | `~/.hyrox-radar` | Where the races, searches and settings are kept (`radar.json`, readable only by you) |
+| `-data` | `~/.race-radar` | Where the races, searches and settings are kept (`radar.json`, readable only by you) |
 | `-chromium` | found on the `PATH` | Chromium or Chrome to use |
 | `-version` | | Print the version |
 
@@ -139,7 +139,7 @@ go run . -data /tmp/radar -listen :8591
 
 ## Not affiliated
 
-HYROX Radar is an independent hobby project. It is not affiliated with, endorsed by or connected
+Race Radar is an independent hobby project. It is not affiliated with, endorsed by or connected
 to HYROX or vivenu. HYROX is a trademark of its owner. The radar only reads public pages, as a
 visitor's browser would.
 

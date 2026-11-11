@@ -1,4 +1,4 @@
-// hyrox-radar watches HYROX ticket shops for sold-out tickets coming back, and sends a Pushover
+// race-radar watches HYROX ticket shops for sold-out tickets coming back, and sends a Pushover
 // notification the moment one can be bought. Its settings page picks the event from HYROX's
 // Find my race and the tickets from the event's shop.
 package main
@@ -21,7 +21,7 @@ var version = "1.2.0"
 func main() {
 	home, _ := os.UserHomeDir()
 	listen := flag.String("listen", ":8590", "address of the settings page")
-	data := flag.String("data", filepath.Join(home, ".hyrox-radar"), "where the watches and settings are kept")
+	data := flag.String("data", filepath.Join(home, ".race-radar"), "where the watches and settings are kept")
 	chromium := flag.String("chromium", "", "Chromium or Chrome to use (default: found on the PATH)")
 	showVersion := flag.Bool("version", false, "print the version")
 	flag.Parse()
@@ -29,6 +29,18 @@ func main() {
 		log.SetFlags(0)
 		log.Print(version)
 		return
+	}
+
+	// Until 1.3 the radar was called hyrox-radar, and kept its data there: moved over once.
+	if old := filepath.Join(home, ".hyrox-radar"); *data == filepath.Join(home, ".race-radar") {
+		if _, err := os.Stat(*data); os.IsNotExist(err) {
+			if _, err := os.Stat(old); err == nil {
+				if err := os.Rename(old, *data); err != nil {
+					log.Fatalf("moving %s to %s: %v", old, *data, err)
+				}
+				log.Printf("moved the data from %s to %s", old, *data)
+			}
+		}
 	}
 
 	store, err := OpenStore(*data)
@@ -51,7 +63,7 @@ func main() {
 		defer cancel()
 		_ = httpServer.Shutdown(shutdown)
 	}()
-	log.Printf("hyrox-radar %s: settings page on %s, data in %s", version, *listen, *data)
+	log.Printf("race-radar %s: settings page on %s, data in %s", version, *listen, *data)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

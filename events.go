@@ -111,7 +111,7 @@ func (e *Events) List(ctx context.Context) ([]Event, error) {
 		return e.list, nil
 	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, FindMyRace, nil)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux aarch64) hyrox-radar")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux aarch64) race-radar")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return e.list, fmt.Errorf("Find my race: %w", err)

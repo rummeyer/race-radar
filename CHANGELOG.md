@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Renamed from HYROX Radar to **Race Radar**, without the trademark in its name: the repository
+  is `rummeyer/race-radar`, the program `race-radar`, the service `race-radar.service`, the data
+  `~/.race-radar` — `~/.hyrox-radar` is moved there on the first start.
+
 ## 1.2.0 — 2026-11-11
 
 - Every region's shop: the classic checkout too, as the DACH, Spanish and other shops have it,

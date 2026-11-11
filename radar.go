@@ -183,7 +183,7 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		log.Printf("%s: check failed (%d): %v", w.Event, w.Failures, err)
 		if w.Failures == brokenAfter {
 			return []Message{{
-				Title: "HYROX Radar: check broken",
+				Title: "Race Radar: check broken",
 				Text:  fmt.Sprintf("%s failed %d times in a row: %s", w.Event, brokenAfter, err),
 				URL:   w.Shop(), URLTitle: "Open ticket shop",
 			}}
@@ -202,7 +202,7 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		w.URL = page.URL
 	}
 	if w.Failures >= brokenAfter {
-		messages = append(messages, Message{Title: "HYROX Radar: works again", Text: w.Event + " can be checked again."})
+		messages = append(messages, Message{Title: "Race Radar: works again", Text: w.Event + " can be checked again."})
 	}
 	before := map[string]bool{}
 	for _, t := range w.Tickets {

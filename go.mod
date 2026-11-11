@@ -1,4 +1,4 @@
-module github.com/rummeyer/hyrox-radar
+module github.com/rummeyer/race-radar
 
 go 1.25
 
