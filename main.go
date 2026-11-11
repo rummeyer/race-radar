@@ -1,6 +1,6 @@
 // race-radar watches HYROX ticket shops for sold-out tickets coming back, and sends a Pushover
-// notification the moment one can be bought. Its settings page picks the event from HYROX's
-// Find my race and the tickets from the event's shop.
+// notification or an email the moment one can be bought. Its dashboard picks the race from
+// HYROX's Find my race and the tickets from the race's shop, and shows what the radar does.
 package main
 
 import (
@@ -20,7 +20,7 @@ var version = "1.2.0"
 
 func main() {
 	home, _ := os.UserHomeDir()
-	listen := flag.String("listen", ":8590", "address of the settings page")
+	listen := flag.String("listen", ":8590", "address of the dashboard")
 	data := flag.String("data", filepath.Join(home, ".race-radar"), "where the watches and settings are kept")
 	chromium := flag.String("chromium", "", "Chromium or Chrome to use (default: found on the PATH)")
 	showVersion := flag.Bool("version", false, "print the version")
@@ -63,7 +63,7 @@ func main() {
 		defer cancel()
 		_ = httpServer.Shutdown(shutdown)
 	}()
-	log.Printf("race-radar %s: settings page on %s, data in %s", version, *listen, *data)
+	log.Printf("race-radar %s: dashboard on %s, data in %s", version, *listen, *data)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

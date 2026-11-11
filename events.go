@@ -56,7 +56,7 @@ func ParseEvents(page string) []Event {
 			e.City = strings.TrimSpace(c[1])
 		}
 		if c := continentRe.FindStringSubmatch(class); c != nil {
-			e.Continent = strings.Title(strings.ReplaceAll(c[1], "-", " "))
+			e.Continent = titleCase(strings.ReplaceAll(c[1], "-", " "))
 		}
 		from, to := "", ""
 		if d := date1Re.FindStringSubmatch(body); d != nil {
@@ -74,6 +74,15 @@ func ParseEvents(page string) []Event {
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].Start.Before(events[j].Start) })
 	return events
+}
+
+// titleCase capitalises each word: "north america" is "North America".
+func titleCase(s string) string {
+	words := strings.Fields(s)
+	for i, w := range words {
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	return strings.Join(words, " ")
 }
 
 // parseDate reads "26. Mar. 2027"; zero if it cannot.
@@ -104,6 +113,8 @@ type Events struct {
 	list    []Event
 }
 
+// List is Find my race's events, fetched again when the kept list is older than half an hour.
+// On failure, the list kept before, if any, comes with the error.
 func (e *Events) List(ctx context.Context) ([]Event, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()

@@ -32,8 +32,16 @@ func Notify(ctx context.Context, s Settings, m Message) error {
 
 // Send mails the message.
 func (e Email) Send(m Message) error {
+	if err := e.send(m); err != nil {
+		return fmt.Errorf("email: %w", err)
+	}
+	return nil
+}
+
+// send is Send, its errors not yet saying they are the email's.
+func (e Email) send(m Message) error {
 	if e.Host == "" || e.To == "" {
-		return errors.New("email: add the SMTP server and the address to send to")
+		return errors.New("add the SMTP server and the address to send to")
 	}
 	port := e.Port
 	if port == 0 {
@@ -67,50 +75,44 @@ func (e Email) Send(m Message) error {
 	}
 	if port != 465 {
 		// STARTTLS where the server offers it, which smtp.SendMail does by itself.
-		if err := smtp.SendMail(addr, auth, from, to, []byte(msg)); err != nil {
-			return fmt.Errorf("email: %w", err)
-		}
-		return nil
+		return smtp.SendMail(addr, auth, from, to, []byte(msg))
 	}
 	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 20 * time.Second}, "tcp", addr, &tls.Config{ServerName: e.Host})
 	if err != nil {
-		return fmt.Errorf("email: %w", err)
+		return err
 	}
 	client, err := smtp.NewClient(conn, e.Host)
 	if err != nil {
-		return fmt.Errorf("email: %w", err)
+		return err
 	}
 	defer client.Close()
 	if auth != nil {
 		if err := client.Auth(auth); err != nil {
-			return fmt.Errorf("email: %w", err)
+			return err
 		}
 	}
 	if err := client.Mail(from); err != nil {
-		return fmt.Errorf("email: %w", err)
+		return err
 	}
 	for _, rcpt := range to {
 		if err := client.Rcpt(rcpt); err != nil {
-			return fmt.Errorf("email: %w", err)
+			return err
 		}
 	}
 	w, err := client.Data()
 	if err != nil {
-		return fmt.Errorf("email: %w", err)
+		return err
 	}
 	if _, err := w.Write([]byte(msg)); err != nil {
-		return fmt.Errorf("email: %w", err)
+		return err
 	}
 	if err := w.Close(); err != nil {
-		return fmt.Errorf("email: %w", err)
+		return err
 	}
 	return client.Quit()
 }
 
+// splitAddresses reads "a@example.com, b@example.com": separated by commas, semicolons or spaces.
 func splitAddresses(s string) []string {
-	var out []string
-	for _, a := range strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == ';' || r == ' ' }) {
-		out = append(out, a)
-	}
-	return out
+	return strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == ';' || r == ' ' })
 }

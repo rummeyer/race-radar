@@ -19,7 +19,7 @@ type Browser interface {
 	Browse(ctx context.Context, event string, path []string) (*Page, error)
 }
 
-// Radar checks every watch in turn, every few minutes, and tells Pushover what changed.
+// Radar checks every watch in turn, every few minutes, and sends notifications of what changed.
 type Radar struct {
 	store  *Store
 	shop   Browser
@@ -29,8 +29,9 @@ type Radar struct {
 	send     func(context.Context, Settings, Message) error
 	log      *Activity
 	wake     chan struct{}
-	busy     sync.Mutex
-	// When the current round started and the next is due, for the page.
+	// busy lets one check run at a time: the round's, or one asked for on the dashboard.
+	busy sync.Mutex
+	// When the next round is due, for the dashboard.
 	mu   sync.Mutex
 	next time.Time
 }
@@ -40,6 +41,7 @@ type EventLister interface {
 	List(ctx context.Context) ([]Event, error)
 }
 
+// NewRadar is a radar on the store's watches, sending by Pushover and email.
 func NewRadar(store *Store, shop Browser, events EventLister) *Radar {
 	return &Radar{store: store, shop: shop, events: events, findShop: ShopURL, send: Notify, log: NewActivity(), wake: make(chan struct{}, 1)}
 }
@@ -112,7 +114,7 @@ func (r *Radar) Check(ctx context.Context, id string) {
 	_ = r.store.Update(func(d *Data) error {
 		w := d.Find(id)
 		if w == nil {
-			return fmt.Errorf("gone")
+			return errNotFound
 		}
 		messages = r.apply(w, page, err, time.Now())
 		seen = summary(w)
@@ -209,13 +211,9 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		before[t.Name] = t.Available
 	}
 	var fresh []string
-	if w.Seen == nil {
-		w.Seen = map[string]time.Time{}
-	}
 	for _, t := range page.Tickets {
 		if t.Available && w.Wants(t.Name) && !before[t.Name] {
 			fresh = append(fresh, strings.TrimSpace(t.Name+" "+t.Price))
-			w.Seen[t.Name] = now
 		}
 	}
 	w.Tickets, w.Error, w.Failures = page.Tickets, "", 0
@@ -306,6 +304,7 @@ func searched(s *Search, events []Event, now time.Time) []Message {
 	return messages
 }
 
+// firstOf is the first value not empty.
 func firstOf(values ...string) string {
 	for _, v := range values {
 		if v != "" {

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -164,7 +165,7 @@ func (s *Shop) Browse(parent context.Context, event string, path []string) (*Pag
 		return nil, errors.New("the shop showed neither choices nor tickets")
 	}
 	for _, choice := range path {
-		if !contains(page.Options, choice) {
+		if !slices.Contains(page.Options, choice) {
 			return page, fmt.Errorf("the shop no longer offers %q", choice)
 		}
 		before := strings.Join(page.Options, "\n")
@@ -203,6 +204,8 @@ func settle(ctx context.Context, done func(*Page) bool) (*Page, error) {
 	return &page, err
 }
 
+// poll tries until try says it is done, every half second, for at most limit: try's last error,
+// or a timeout.
 func poll(ctx context.Context, limit time.Duration, try func() (bool, error)) error {
 	deadline := time.Now().Add(limit)
 	for {
@@ -234,15 +237,6 @@ func english(event string) string {
 	q.Set("lang", "en")
 	u.RawQuery = q.Encode()
 	return u.String()
-}
-
-func contains(list []string, want string) bool {
-	for _, each := range list {
-		if each == want {
-			return true
-		}
-	}
-	return false
 }
 
 // quietLogf leaves out chromedp's chatter about events it does not handle.

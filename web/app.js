@@ -12,6 +12,7 @@ function el(tag, className, ...children) {
   return node;
 }
 
+/** A button that hands itself to onClick, to show it is busy. */
 function button(text, className, onClick) {
   const b = el('button', className, text);
   b.type = 'button';
@@ -19,10 +20,12 @@ function button(text, className, onClick) {
   return b;
 }
 
+/** A status badge: kind ok, bad or wait colours it. */
 function tag(text, kind) {
   return el('span', `tag ${kind || ''}`, text);
 }
 
+/** Calls the radar's API: its answer, or an Error with the radar's message. */
 async function api(method, path, body) {
   const res = await fetch(path, {
     method,
@@ -67,7 +70,7 @@ let state = null;
 async function refresh() {
   try {
     state = await api('GET', '/api/state');
-  } catch (err) {
+  } catch {
     $('live').className = 'live down';
     $('live-text').textContent = 'Radar unreachable';
     return;
@@ -101,6 +104,7 @@ function wants(w, name) {
   return !w.days?.length || w.days.some((d) => upper.includes(d.toUpperCase()));
 }
 
+/** The watch's tickets it is for. */
 function wantedOf(w) {
   return (w.tickets ?? []).filter((t) => wants(w, t.name));
 }
@@ -125,17 +129,14 @@ function renderWatches() {
       : open ? tag('Available', 'ok') : never(w.checked) ? tag('First check…', 'wait') : tag('Sold out');
     const running = state.running?.subject === w.event;
     const shop = w.ticketsUrl || w.url;
-    const title = el('a', 'race-link', w.event || 'Race');
-    title.href = w.racePage || shop;
-    title.target = '_blank';
-    title.rel = 'noopener';
+    const title = newTab(w.event || 'Race', 'race-link', w.racePage || shop);
     title.title = w.racePage ? 'Open the race page' : 'Open the ticket shop';
     const top = el('div', 'race-top',
       el('div', '',
         el('h3', '', title),
         el('div', 'meta', status, w.dates && el('span', '', w.dates), el('span', '', running ? 'checking now…' : `checked ${ago(w.checked)}`))),
       el('div', 'race-actions',
-        shop && shopLink(shop),
+        shop && newTab('Open shop ↗', 'shop', shop),
         button('Check now', 'text', async (b) => {
           b.textContent = 'Checking…';
           b.disabled = true;
@@ -161,22 +162,15 @@ function renderWatches() {
     const list = el('ul', 'tickets', ...shown.map((t) => t.note ? el('li', 'ticket note', el('span', 'muted', t.name)) :
       el('li', `ticket ${t.available ? 'available' : ''}`,
         el('span', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price)),
-        t.available ? buyLink(shop) : tag(t.unseen ? 'Not listed' : 'Sold out'))));
+        t.available ? newTab('Buy now →', 'buy', shop) : tag(t.unseen ? 'Not listed' : 'Sold out'))));
     const classes = ['race', open && 'open', w.error && 'failing', w.paused && 'paused'].filter(Boolean).join(' ');
     return el('article', classes, top, chips, list, w.error && el('p', 'error', w.error));
   }));
 }
 
-function shopLink(href) {
-  const a = el('a', 'shop', 'Open shop ↗');
-  a.href = href;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  return a;
-}
-
-function buyLink(href) {
-  const a = el('a', 'buy', 'Buy now →');
+/** A link that opens in a new tab: the shop stays open beside the dashboard. */
+function newTab(text, className, href) {
+  const a = el('a', className, text);
   a.href = href;
   a.target = '_blank';
   a.rel = 'noopener';
@@ -230,7 +224,8 @@ function renderLog() {
 // ── Adding a race ──────────────────────────────────────────────────────────
 
 let events = [];
-const wizard = { url: '', path: [], page: null, event: null };
+/** The race being added: its shop, the choices so far, what the shop shows, and Find my race's entry. */
+const wizard = { url: '', path: [], page: null, event: null, racePage: '' };
 
 async function loadEvents() {
   try {
@@ -348,6 +343,7 @@ $('save-manual').addEventListener('click', async () => {
   done();
 });
 
+/** Back to the dashboard once a race is added. */
 function done() {
   $('wizard').hidden = true;
   $('event').value = '';
@@ -452,6 +448,7 @@ function renderSettings() {
   $('e-to').value = e.to;
 }
 
+/** Selects the Pushover device, listed even before the list of devices has come. */
 function setDevice(device) {
   const select = $('p-device');
   if (device && ![...select.options].some((o) => o.value === device)) {

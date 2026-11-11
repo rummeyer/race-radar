@@ -63,6 +63,7 @@ type pushoverAnswer struct {
 	Devices []string `json:"devices"`
 }
 
+// call posts form to the API's path, and reads Pushover's answer; its errors, if it has any.
 func (p Pushover) call(ctx context.Context, path string, form url.Values) (*pushoverAnswer, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, PushoverAPI+path, strings.NewReader(form.Encode()))
 	if err != nil {

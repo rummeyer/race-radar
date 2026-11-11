@@ -40,10 +40,12 @@ type Activity struct {
 
 const keepEntries = 200
 
+// NewActivity is an empty log, its stats counting from now.
 func NewActivity() *Activity {
 	return &Activity{stats: Stats{Started: time.Now()}}
 }
 
+// Add logs what the radar did, and counts it.
 func (a *Activity) Add(e Entry) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -66,13 +68,14 @@ func (a *Activity) Add(e Entry) {
 	}
 }
 
-// Start says what is being checked now; Stop that it is over.
+// Start says what is being checked now.
 func (a *Activity) Start(subject string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.running = &Running{Subject: subject, Since: time.Now()}
 }
 
+// Stop says the check is over.
 func (a *Activity) Stop() {
 	a.mu.Lock()
 	defer a.mu.Unlock()

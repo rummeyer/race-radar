@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -31,7 +32,7 @@ type Email struct {
 	To       string `json:"to"`
 }
 
-// Settings are the radar's own.
+// Settings are how notifications are sent, and how often the shops are checked.
 type Settings struct {
 	Pushover        Pushover `json:"pushover"`
 	Email           Email    `json:"email"`
@@ -64,8 +65,6 @@ type Watch struct {
 	Tickets  []Ticket  `json:"tickets"`
 	Error    string    `json:"error,omitempty"`
 	Failures int       `json:"failures"`
-	// When each wanted ticket was last seen becoming available.
-	Seen map[string]time.Time `json:"seen,omitempty"`
 }
 
 // Shop is the quickest way into the shop: its tickets page, else the event's.
@@ -79,7 +78,7 @@ func (w *Watch) Shop() string {
 // Wants says whether a ticket is one the watch is for.
 func (w *Watch) Wants(name string) bool {
 	if len(w.Wanted) > 0 {
-		return contains(w.Wanted, name)
+		return slices.Contains(w.Wanted, name)
 	}
 	upper := strings.ToUpper(name)
 	// Set up by hand: the plain tickets of the choices, not their charity or adaptive ones.
@@ -124,6 +123,7 @@ type Store struct {
 	data Data
 }
 
+// OpenStore reads the data kept in dir, made if need be; none yet is an empty radar.
 func OpenStore(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
@@ -183,6 +183,7 @@ func (d Data) Find(id string) *Watch {
 	return nil
 }
 
+// newID is a short random ID for a watch or a search.
 func newID() string {
 	b := make([]byte, 6)
 	_, _ = rand.Read(b)

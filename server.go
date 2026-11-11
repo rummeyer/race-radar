@@ -23,6 +23,7 @@ type Server struct {
 	events *Events
 }
 
+// Handler serves the dashboard's files and its API.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	web, _ := fs.Sub(webFiles, "web")
@@ -288,6 +289,7 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request) {
 	done(w, err)
 }
 
+// keep replaces a saved secret by the one given, unless that is empty.
 func keep(saved *string, given string) {
 	if given = strings.TrimSpace(given); given != "" {
 		*saved = given
@@ -322,7 +324,8 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request) {
 	reply(w, map[string]bool{"ok": true})
 }
 
-var errNotFound = errors.New("no such watch")
+// errNotFound is a watch, search or notification channel that is not there.
+var errNotFound = errors.New("not found")
 
 // isRacePage says whether a link is to a race's page on hyrox.com.
 func isRacePage(link string) bool {
@@ -330,6 +333,7 @@ func isRacePage(link string) bool {
 	return err == nil && u.Scheme == "https" && strings.TrimPrefix(u.Hostname(), "www.") == "hyrox.com" && strings.HasPrefix(u.Path, "/event/")
 }
 
+// read decodes the request's JSON into into, or answers 400.
 func read(w http.ResponseWriter, r *http.Request, into any) bool {
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(into); err != nil {
 		fail(w, http.StatusBadRequest, err)
@@ -343,6 +347,7 @@ func reply(w http.ResponseWriter, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// done answers a change: ok, or what kept it from happening.
 func done(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, errNotFound):
