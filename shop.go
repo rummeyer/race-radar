@@ -53,7 +53,7 @@ type Shop struct {
 
 // readPage reads the shop's state. vivenu, which runs HYROX's shops, has two designs. Both show
 // the choices so far as an <ol role=list> of steps. The current one has the step's options as
-// buttons right after it and an "Add 1 … to the cart" button per ticket, disabled while it
+// buttons after it — right after, or after the bar the steps sit in and an "Add 1 … to the cart" button per ticket, disabled while it
 // cannot be bought. The classic checkout, as the DACH shop's, starts with the categories as
 // links, has the later options as buttons after the steps, and a .ticket-type box per ticket,
 // labelled Sold out while it is.
@@ -65,6 +65,15 @@ const readPage = `(() => {
   const choice = (e) => text(e).split('\n').map((l) => l.trim()).find((l) => l && !status.test(l)) ?? '';
   const amounts = (e) => text(e).match(/[$€£¥₩]\s?[\d.,]+|[\d.,]+\s?(?:[$€£]|kr|zł|Kč|Ft|lei)|(?:CHF|AED|SGD|HKD|AUD|NZD|CAD|R\$|MX\$|A\$|NZ\$|S\$|HK\$)\s?[\d.,]+/g) ?? [''];
   const ol = document.querySelector('ol[role=list]');
+  // The first block with links or buttons after the steps: right after them, or — as since
+  // 12.11.2026 in vivenu's current design, the steps in a bar of their own — after one of the
+  // boxes around them.
+  const after = (start) => {
+    for (let e = start; e && e !== document.body; e = e.parentElement) {
+      for (let n = e.nextElementSibling; n; n = n.nextElementSibling) if (n.querySelector('a, button')) return n;
+    }
+    return null;
+  };
   const steps = ol ? [...ol.querySelectorAll('li > button')].map((b) => {
     const label = text(b.querySelector('span'));
     return { label, value: text(b).slice(label.length).trim() };
@@ -91,7 +100,7 @@ const readPage = `(() => {
   }
   let options = [];
   if (!tickets.length) {
-    const holder = ol?.nextElementSibling ?? document.querySelector('#current-step .categories, .categories');
+    const holder = (ol && after(ol)) ?? document.querySelector('#current-step .categories, .categories');
     options = holder ? [...holder.querySelectorAll('a, button')].filter((e) => !e.closest('.ticket-type')).map(choice).filter(Boolean) : [];
   }
   // The classic checkout says "12/10/2026 until 12/13/2026" beneath the race's name.
