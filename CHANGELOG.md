@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.3.0 — 2026-11-12
+
+- The current shop design again: since 12.11.2026 vivenu puts the steps in a bar of their own,
+  and the choices came after the bar, not right after the steps — every check said "the shop
+  showed neither choices nor tickets". They are taken from the first block with buttons after the
+  steps now, in either place.
 - Renamed from HYROX Radar to **Race Radar**, without the trademark in its name: the repository
   is `rummeyer/race-radar`, the program `race-radar`, the service `race-radar.service`, the data
   `~/.race-radar` — `~/.hyrox-radar` is moved there on the first start.
