@@ -28,6 +28,8 @@ type Ticket struct {
 	Name      string `json:"name"`
 	Available bool   `json:"available"`
 	Price     string `json:"price"`
+	// What the ticket's card said, as the radar read it: kept where a ticket was seen available.
+	Text string `json:"text,omitempty"`
 }
 
 // Page is what the shop shows after the given choices: the next step's options, or the tickets.
@@ -42,6 +44,8 @@ type Page struct {
 	Steps      []Step   `json:"steps"`
 	Options    []string `json:"options"`
 	Tickets    []Ticket `json:"tickets"`
+	// A screenshot of the tickets, taken when one is available: proof of what the shop showed.
+	Shot []byte `json:"-"`
 }
 
 // Shop opens HYROX ticket shops in headless Chromium, as a visitor would. One page at a time:
@@ -63,6 +67,7 @@ const readPage = `(() => {
   // A choice's name: its first line that is not a status badge, as some shops put above it.
   const status = /^(almost )?sold out$|^tickets? available$|^available$|^few (tickets )?left$|^new$|^coming soon$/i;
   const choice = (e) => text(e).split('\n').map((l) => l.trim()).find((l) => l && !status.test(l)) ?? '';
+  const said = (e) => text(e).replace(/\s+/g, ' ').slice(0, 400);
   const amounts = (e) => text(e).match(/[$€£¥₩]\s?[\d.,]+|[\d.,]+\s?(?:[$€£]|kr|zł|Kč|Ft|lei)|(?:CHF|AED|SGD|HKD|AUD|NZD|CAD|R\$|MX\$|A\$|NZ\$|S\$|HK\$)\s?[\d.,]+/g) ?? [''];
   const ol = document.querySelector('ol[role=list]');
   // The first block with links or buttons after the steps: right after them, or — as since
@@ -82,11 +87,12 @@ const readPage = `(() => {
   // that can be bought, so they would leave out the sold-out ones (11.11.2026: Osaka).
   let tickets = [...document.querySelectorAll('.ticket-type')].map((card) => {
     const buttons = [...card.querySelectorAll('.buttons button, .buttons select, .buttons input')];
-    const soldOut = /sold out|unavailable|not available|ausverkauft|épuisé|agotad|esaurit/i.test(text(card.querySelector('.label')));
+    const soldOut = /(?<!almost )sold out|unavailable|not available|ausverkauft|épuisé|agotad|esaurit/i.test(text(card.querySelector('.label')));
     return {
       name: text(card.querySelector('.info p') ?? card.querySelector('p')),
       available: !soldOut && buttons.some((b) => !b.disabled && !/^remove/i.test(b.getAttribute('aria-label') ?? '')),
       price: text(card.querySelector('.price')) || amounts(card)[0],
+      text: said(card),
     };
   }).filter((t) => t.name);
   if (!tickets.length) {
@@ -95,7 +101,7 @@ const readPage = `(() => {
       const card = b.closest('[class*="group/card"]') ?? b.parentElement?.parentElement;
       // The price opens its breakdown; else the last amount on the card, after any in the description.
       const found = amounts(card.querySelector('[data-slot="dialog-trigger"]') ?? card);
-      return { name, available: !b.disabled, price: found[found.length - 1] };
+      return { name, available: !b.disabled, price: found[found.length - 1], text: said(card) };
     });
   }
   let options = [];
@@ -189,6 +195,9 @@ func (s *Shop) Browse(parent context.Context, event string, path []string) (*Pag
 			return nil, fmt.Errorf("nothing came after choosing %q", choice)
 		}
 	}
+	if slices.ContainsFunc(page.Tickets, func(t Ticket) bool { return t.Available }) {
+		page = confirm(ctx, page)
+	}
 	if strings.Contains(page.URL, "/tickets/") || strings.Contains(page.URL, "/checkout/") {
 		page.TicketsURL = strings.Split(page.URL, "?")[0]
 	}
@@ -211,6 +220,48 @@ func settle(ctx context.Context, done func(*Page) bool) (*Page, error) {
 		_ = chromedp.Run(ctx, chromedp.Evaluate(readPage, &page))
 	}
 	return &page, err
+}
+
+// confirmAfter is how long a ticket must stay available to count: a page still filling in may
+// show a ticket's buttons before the label that says it is sold out.
+const confirmAfter = 3 * time.Second
+
+// confirm reads the tickets once more after a moment: a ticket counts as available only if both
+// reads say so. A screenshot is taken of any that still are.
+func confirm(ctx context.Context, first *Page) *Page {
+	select {
+	case <-ctx.Done():
+		return first
+	case <-time.After(confirmAfter):
+	}
+	var again Page
+	if err := chromedp.Run(ctx, chromedp.Evaluate(readPage, &again)); err != nil || len(again.Tickets) == 0 {
+		log.Printf("confirming %s: the tickets are gone on a second look", first.Title)
+		for i := range first.Tickets {
+			first.Tickets[i].Available = false
+		}
+		return first
+	}
+	was := map[string]bool{}
+	for _, t := range first.Tickets {
+		was[t.Name] = t.Available
+	}
+	open := false
+	for i, t := range again.Tickets {
+		if was[t.Name] && !t.Available {
+			log.Printf("confirming %s: %s was available, a second look says not", first.Title, t.Name)
+		}
+		again.Tickets[i].Available = t.Available && was[t.Name]
+		open = open || again.Tickets[i].Available
+	}
+	if open {
+		var shot []byte
+		if err := chromedp.Run(ctx, chromedp.FullScreenshot(&shot, 70)); err != nil {
+			log.Printf("screenshot of %s: %v", first.Title, err)
+		}
+		again.Shot = shot
+	}
+	return &again
 }
 
 // poll tries until try says it is done, every half second, for at most limit: try's last error,

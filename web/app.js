@@ -164,8 +164,21 @@ function renderWatches() {
         el('span', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price)),
         t.available ? newTab('Buy now →', 'buy', shop) : tag(t.unseen ? 'Not listed' : 'Sold out'))));
     const classes = ['race', open && 'open', w.error && 'failing', w.paused && 'paused'].filter(Boolean).join(' ');
-    return el('article', classes, top, chips, list, w.error && el('p', 'error', w.error));
+    return el('article', classes, top, chips, list, sightings(w), w.error && el('p', 'error', w.error));
   }));
+}
+
+/** The times a wanted ticket was seen available: what its card said, and the shop's screenshot. */
+function sightings(w) {
+  const seen = w.sightings ?? [];
+  if (!seen.length) return null;
+  const when = (iso) => new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return el('details', 'sightings',
+    el('summary', '', `Seen available ${seen.length === 1 ? 'once' : `${seen.length} times`}, last ${ago(seen[0].at)}`),
+    el('ul', '', ...seen.map((s) => el('li', '',
+      el('div', 'when', el('time', '', when(s.at)), s.shot && newTab('Screenshot ↗', 'shot', `/api/shots/${s.shot}`)),
+      ...s.tickets.map((t) => el('div', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price),
+        t.text && el('p', 'said', t.text)))))));
 }
 
 /** A link that opens in a new tab: the shop stays open beside the dashboard. */

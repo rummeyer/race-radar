@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- A second look before an alert: a ticket counts as available only if it still is 3 seconds
+  later, so a page still filling in — buttons there, the *Sold out* label not yet — sends no alert.
+- Proof of every ticket seen available: what its card said, with price, and a screenshot of the
+  shop, kept with the watch (the last five) and shown on the dashboard under *Seen available*.
+  The screenshots are in `~/.race-radar/shots`, and go with their watch.
+- *Almost sold out* is no longer read as sold out.
+
 ## 1.3.0 — 2026-11-12
 
 - The current shop design again: since 12.11.2026 vivenu puts the steps in a bar of their own,

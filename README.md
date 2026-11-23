@@ -117,6 +117,11 @@ Pushover alerts are sent with high priority, so they come through quiet hours. T
 pick the ticket, pay — returned tickets go fast. The link opens the shop's tickets page, one click
 shorter than the event's.
 
+Before it alerts, the radar looks a second time, 3 seconds later: only a ticket available both
+times counts. It keeps what the ticket's card said and a screenshot of the shop — the dashboard
+shows them under *Seen available* on the race, the last five times, so that you can see what was
+there even when it was gone by the time you looked.
+
 ## Good to know
 
 - **Keep the dashboard to your network.** It has no login, and it is where the Pushover keys

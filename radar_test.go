@@ -248,3 +248,51 @@ func TestBestShopPrefersTheRegionsSeasonShop(t *testing.T) {
 		t.Error("India's shop not taken")
 	}
 }
+
+func TestKeepsProofOfATicketSeenAvailable(t *testing.T) {
+	shop := &fakeShop{page: tickets(false, false)}
+	r, _, id := radarWith(t, shop)
+	ctx := context.Background()
+	shots := filepath.Join(r.store.Dir(), "shots")
+
+	r.Check(ctx, id)
+	shop.page = tickets(true, false)
+	shop.page.Tickets[0].Text = "HYROX MEN | Friday $218.33 Add 1 to the cart"
+	shop.page.Shot = []byte("jpeg")
+	r.Check(ctx, id)
+	w := r.store.Read().Find(id)
+	if len(w.Sightings) != 1 || len(w.Sightings[0].Tickets) != 1 || w.Sightings[0].Tickets[0].Text == "" || w.Sightings[0].Shot == "" {
+		t.Fatalf("want one sighting of Friday with its card and a screenshot: %+v", w.Sightings)
+	}
+	if w.Tickets[0].Text != "" {
+		t.Errorf("the cards' text belongs to the sighting only: %+v", w.Tickets[0])
+	}
+	if raw, err := os.ReadFile(filepath.Join(shots, w.Sightings[0].Shot)); err != nil || string(raw) != "jpeg" {
+		t.Fatalf("screenshot not kept: %v", err)
+	}
+	res := httptest.NewRecorder()
+	(&Server{store: r.store, radar: r}).Handler().ServeHTTP(res, httptest.NewRequest("GET", "/api/shots/"+w.Sightings[0].Shot, nil))
+	if res.Code != http.StatusOK || res.Body.String() != "jpeg" {
+		t.Errorf("the dashboard should serve the screenshot: %d", res.Code)
+	}
+	res = httptest.NewRecorder()
+	(&Server{store: r.store, radar: r}).Handler().ServeHTTP(res, httptest.NewRequest("GET", "/api/shots/..%2fradar.json", nil))
+	if res.Code == http.StatusOK {
+		t.Error("only screenshots are served")
+	}
+
+	// Still available: no new sighting, and its screenshot goes.
+	shop.page.Shot = []byte("again")
+	r.Check(ctx, id)
+	files, _ := os.ReadDir(shots)
+	if w := r.store.Read().Find(id); len(w.Sightings) != 1 || len(files) != 1 {
+		t.Fatalf("still available is no new sighting: %d sightings, %d files", len(w.Sightings), len(files))
+	}
+
+	// Removed: its screenshots go at the next check.
+	_ = r.store.Update(func(d *Data) error { d.Watches = nil; return nil })
+	r.pruneShots()
+	if files, _ := os.ReadDir(shots); len(files) != 0 {
+		t.Errorf("screenshots of a removed watch should go: %d left", len(files))
+	}
+}

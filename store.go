@@ -65,7 +65,20 @@ type Watch struct {
 	Tickets  []Ticket  `json:"tickets"`
 	Error    string    `json:"error,omitempty"`
 	Failures int       `json:"failures"`
+	// The latest times a wanted ticket was seen available, newest first.
+	Sightings []Sighting `json:"sightings,omitempty"`
 }
+
+// Sighting is proof of a wanted ticket seen available: the cards as the radar read them, and a
+// screenshot of the shop in the data's shots folder.
+type Sighting struct {
+	At      time.Time `json:"at"`
+	Tickets []Ticket  `json:"tickets"`
+	Shot    string    `json:"shot,omitempty"`
+}
+
+// keepSightings is how many sightings a watch keeps.
+const keepSightings = 5
 
 // Shop is the quickest way into the shop: its tickets page, else the event's.
 func (w *Watch) Shop() string {
@@ -171,6 +184,11 @@ func (s *Store) Update(change func(*Data) error) error {
 		return err
 	}
 	return os.Rename(tmp, s.path)
+}
+
+// Dir is the folder the data is kept in.
+func (s *Store) Dir() string {
+	return filepath.Dir(s.path)
 }
 
 // Find is the watch with this ID.

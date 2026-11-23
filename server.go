@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -35,6 +36,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PATCH /api/watches/{id}", s.changeWatch)
 	mux.HandleFunc("DELETE /api/watches/{id}", s.deleteWatch)
 	mux.HandleFunc("POST /api/watches/{id}/check", s.checkWatch)
+	mux.HandleFunc("GET /api/shots/{name}", s.shot)
 	mux.HandleFunc("POST /api/searches", s.addSearch)
 	mux.HandleFunc("DELETE /api/searches/{id}", s.deleteSearch)
 	mux.HandleFunc("PUT /api/settings", s.saveSettings)
@@ -204,6 +206,17 @@ func (s *Server) checkWatch(w http.ResponseWriter, r *http.Request) {
 	}
 	s.radar.Check(r.Context(), r.PathValue("id"))
 	reply(w, s.store.Read().Find(r.PathValue("id")))
+}
+
+// shot serves a sighting's screenshot.
+func (s *Server) shot(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if !shotName.MatchString(name) {
+		fail(w, http.StatusNotFound, errNotFound)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, max-age=86400")
+	http.ServeFile(w, r, filepath.Join(s.store.Dir(), "shots", name))
 }
 
 func (s *Server) addSearch(w http.ResponseWriter, r *http.Request) {

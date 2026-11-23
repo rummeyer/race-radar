@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -106,6 +109,10 @@ func (r *Radar) Check(ctx context.Context, id string) {
 	started := time.Now()
 	page, err := r.browse(ctx, w)
 	r.log.Stop()
+	var shot string
+	if err == nil && len(page.Shot) > 0 {
+		shot = r.saveShot(w.ID, page.Shot, started)
+	}
 	if err == nil && len(page.Tickets) == 0 {
 		err = fmt.Errorf("the shop lists no tickets after %s", strings.Join(w.Path, " › "))
 	}
@@ -117,9 +124,14 @@ func (r *Radar) Check(ctx context.Context, id string) {
 			return errNotFound
 		}
 		messages = r.apply(w, page, err, time.Now())
+		// A screenshot of tickets that were available before is not news: it goes again.
+		if shot != "" && len(w.Sightings) > 0 && w.Sightings[0].At.Equal(w.Checked) {
+			w.Sightings[0].Shot = shot
+		}
 		seen = summary(w)
 		return nil
 	})
+	r.pruneShots()
 	took := time.Since(started).Seconds()
 	if errors.Is(err, errNotOnSale) {
 		r.log.Add(Entry{Kind: "check", Subject: w.Event, Text: "tickets not on sale yet", Seconds: took})
@@ -211,12 +223,26 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		before[t.Name] = t.Available
 	}
 	var fresh []string
+	var seen []Ticket
 	for _, t := range page.Tickets {
 		if t.Available && w.Wants(t.Name) && !before[t.Name] {
 			fresh = append(fresh, strings.TrimSpace(t.Name+" "+t.Price))
+			seen = append(seen, t)
 		}
 	}
-	w.Tickets, w.Error, w.Failures = page.Tickets, "", 0
+	if len(seen) > 0 {
+		w.Sightings = append([]Sighting{{At: now, Tickets: seen}}, w.Sightings...)
+		if len(w.Sightings) > keepSightings {
+			w.Sightings = w.Sightings[:keepSightings]
+		}
+	}
+	// What the cards said is kept with a sighting only: the file would grow with every check.
+	w.Tickets = make([]Ticket, len(page.Tickets))
+	for i, t := range page.Tickets {
+		t.Text = ""
+		w.Tickets[i] = t
+	}
+	w.Error, w.Failures = "", 0
 	// Find my race's name and dates, where it gave them, read better than the shop's.
 	if w.Event == "" {
 		w.Event = page.Title
@@ -238,6 +264,44 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		})
 	}
 	return messages
+}
+
+// shotName is a screenshot's file name in the shots folder: the watch's ID and when it was taken.
+var shotName = regexp.MustCompile(`^[A-Za-z0-9]+-[0-9]+\.jpg$`)
+
+// saveShot keeps a screenshot of a watch's shop in the shots folder: its file name, or empty.
+func (r *Radar) saveShot(id string, shot []byte, at time.Time) string {
+	dir := filepath.Join(r.store.Dir(), "shots")
+	name := fmt.Sprintf("%s-%d.jpg", id, at.Unix())
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		log.Printf("keeping a screenshot: %v", err)
+		return ""
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), shot, 0o600); err != nil {
+		log.Printf("keeping a screenshot: %v", err)
+		return ""
+	}
+	return name
+}
+
+// pruneShots removes the screenshots no sighting names any more.
+func (r *Radar) pruneShots() {
+	dir := filepath.Join(r.store.Dir(), "shots")
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	kept := map[string]bool{}
+	for _, w := range r.store.Read().Watches {
+		for _, s := range w.Sightings {
+			kept[s.Shot] = true
+		}
+	}
+	for _, f := range files {
+		if !kept[f.Name()] && shotName.MatchString(f.Name()) {
+			_ = os.Remove(filepath.Join(dir, f.Name()))
+		}
+	}
 }
 
 // Search looks through Find my race for every search, and tells of races that are new to it or
