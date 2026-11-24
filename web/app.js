@@ -112,7 +112,10 @@ function wantedOf(w) {
 function renderStats() {
   const active = state.watches.filter((w) => !w.paused);
   $('s-races').textContent = active.length;
-  $('s-open').textContent = active.flatMap(wantedOf).filter((t) => t.available).length;
+  // How often a wanted ticket came back, of every race watched: most of the time none is there now.
+  $('s-seen').textContent = state.watches.reduce((n, w) => n + (w.seen ?? 0), 0);
+  const last = state.watches.map((w) => w.sightings?.[0]?.at).filter(Boolean).sort().pop();
+  $('s-seen-lbl').textContent = last ? `Tickets seen · last ${ago(last)}` : 'Tickets seen available';
   $('s-checks').textContent = state.stats.checks;
   $('s-checks-lbl').textContent = state.stats.failures ? `Checks · ${state.stats.failures} failed` : 'Checks since start';
   $('s-alerts').textContent = state.stats.alerts;

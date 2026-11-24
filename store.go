@@ -65,8 +65,10 @@ type Watch struct {
 	Tickets  []Ticket  `json:"tickets"`
 	Error    string    `json:"error,omitempty"`
 	Failures int       `json:"failures"`
-	// The latest times a wanted ticket was seen available, newest first.
+	// The latest times a wanted ticket was seen available, newest first, and how many were seen
+	// in all: the sightings keep only the latest.
 	Sightings []Sighting `json:"sightings,omitempty"`
+	Seen      int        `json:"seen,omitempty"`
 }
 
 // Sighting is proof of a wanted ticket seen available: the cards as the radar read them, and a

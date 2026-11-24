@@ -230,6 +230,7 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 			seen = append(seen, t)
 		}
 	}
+	w.Seen += len(seen)
 	if len(seen) > 0 {
 		w.Sightings = append([]Sighting{{At: now, Tickets: seen}}, w.Sightings...)
 		if len(w.Sightings) > keepSightings {

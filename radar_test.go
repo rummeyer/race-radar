@@ -261,7 +261,7 @@ func TestKeepsProofOfATicketSeenAvailable(t *testing.T) {
 	shop.page.Shot = []byte("jpeg")
 	r.Check(ctx, id)
 	w := r.store.Read().Find(id)
-	if len(w.Sightings) != 1 || len(w.Sightings[0].Tickets) != 1 || w.Sightings[0].Tickets[0].Text == "" || w.Sightings[0].Shot == "" {
+	if w.Seen != 1 || len(w.Sightings) != 1 || len(w.Sightings[0].Tickets) != 1 || w.Sightings[0].Tickets[0].Text == "" || w.Sightings[0].Shot == "" {
 		t.Fatalf("want one sighting of Friday with its card and a screenshot: %+v", w.Sightings)
 	}
 	if w.Tickets[0].Text != "" {
@@ -285,7 +285,7 @@ func TestKeepsProofOfATicketSeenAvailable(t *testing.T) {
 	shop.page.Shot = []byte("again")
 	r.Check(ctx, id)
 	files, _ := os.ReadDir(shots)
-	if w := r.store.Read().Find(id); len(w.Sightings) != 1 || len(files) != 1 {
+	if w := r.store.Read().Find(id); w.Seen != 1 || len(w.Sightings) != 1 || len(files) != 1 {
 		t.Fatalf("still available is no new sighting: %d sightings, %d files", len(w.Sightings), len(files))
 	}
 
