@@ -73,8 +73,13 @@ type Watch struct {
 
 // Sighting is proof of a wanted ticket seen available: the cards as the radar read them, and a
 // screenshot of the shop in the data's shots folder.
+//
+// How long the tickets were there is known only as closely as the checks go: Last is the latest
+// check that still saw one of them, Gone the first that saw none — empty while they are there.
 type Sighting struct {
 	At      time.Time `json:"at"`
+	Last    time.Time `json:"last,omitzero"`
+	Gone    time.Time `json:"gone,omitzero"`
 	Tickets []Ticket  `json:"tickets"`
 	Shot    string    `json:"shot,omitempty"`
 }

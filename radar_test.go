@@ -296,3 +296,20 @@ func TestKeepsProofOfATicketSeenAvailable(t *testing.T) {
 		t.Errorf("screenshots of a removed watch should go: %d left", len(files))
 	}
 }
+
+func TestTellsHowLongATicketStayed(t *testing.T) {
+	w := &Watch{ID: "w1", Wanted: []string{"HYROX MEN | Friday"}, Tickets: tickets(false, false).Tickets}
+	r := &Radar{}
+	start := time.Date(2026, 11, 23, 21, 33, 40, 0, time.UTC)
+	r.apply(w, tickets(true, false), nil, start)
+	r.apply(w, tickets(true, false), nil, start.Add(2*time.Minute))
+	if s := w.Sightings[0]; !s.Last.Equal(start.Add(2*time.Minute)) || !s.Gone.IsZero() {
+		t.Fatalf("still there: %+v", s)
+	}
+	r.apply(w, nil, errors.New("slow shop"), start.Add(4*time.Minute))
+	r.apply(w, tickets(false, false), nil, start.Add(6*time.Minute))
+	r.apply(w, tickets(false, false), nil, start.Add(8*time.Minute))
+	if s := w.Sightings[0]; !s.Last.Equal(start.Add(2*time.Minute)) || !s.Gone.Equal(start.Add(6*time.Minute)) {
+		t.Fatalf("want last seen at +2 min, gone at +6 min: %+v", s)
+	}
+}

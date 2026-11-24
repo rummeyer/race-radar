@@ -7,6 +7,8 @@
 - Proof of every ticket seen available: what its card said, with price, and a screenshot of the
   shop, kept with the watch (the last five) and shown on the dashboard under *Seen available*.
   The screenshots are in `~/.race-radar/shots`, and go with their watch.
+- How long a ticket seen available stayed, as closely as the checks tell: "gone within 2½ min",
+  "there 4–6 min", or "still there".
 - The dashboard counts the tickets *seen* available, in all — not those available now, which are
   mostly none.
 - *Almost sold out* is no longer read as sold out.

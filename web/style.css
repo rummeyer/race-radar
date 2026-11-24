@@ -118,6 +118,7 @@ aside { position: sticky; top: 84px; }
 .sightings ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .sightings li { border-left: 3px solid var(--ok); padding: 6px 12px; display: grid; gap: 4px; }
 .sightings .when { display: flex; gap: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sightings .stayed { color: var(--text); }
 .sightings .name { font-weight: 700; }
 .sightings .price { color: var(--muted); margin-left: 8px; }
 .sightings .said { margin: 2px 0 0; color: var(--muted); overflow-wrap: anywhere; }

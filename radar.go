@@ -232,11 +232,12 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 	}
 	w.Seen += len(seen)
 	if len(seen) > 0 {
-		w.Sightings = append([]Sighting{{At: now, Tickets: seen}}, w.Sightings...)
+		w.Sightings = append([]Sighting{{At: now, Last: now, Tickets: seen}}, w.Sightings...)
 		if len(w.Sightings) > keepSightings {
 			w.Sightings = w.Sightings[:keepSightings]
 		}
 	}
+	gone(w.Sightings, page.Tickets, now)
 	// What the cards said is kept with a sighting only: the file would grow with every check.
 	w.Tickets = make([]Ticket, len(page.Tickets))
 	for i, t := range page.Tickets {
@@ -265,6 +266,27 @@ func (r *Radar) apply(w *Watch, page *Page, err error, now time.Time) []Message 
 		})
 	}
 	return messages
+}
+
+// gone keeps track of how long the sighted tickets stay: seen still, or gone now.
+func gone(sightings []Sighting, tickets []Ticket, now time.Time) {
+	available := map[string]bool{}
+	for _, t := range tickets {
+		available[t.Name] = t.Available
+	}
+	for i := range sightings {
+		s := &sightings[i]
+		if !s.Gone.IsZero() {
+			continue
+		}
+		s.Gone = now
+		for _, t := range s.Tickets {
+			if available[t.Name] {
+				s.Last, s.Gone = now, time.Time{}
+				break
+			}
+		}
+	}
 }
 
 // shotName is a screenshot's file name in the shots folder: the watch's ID and when it was taken.

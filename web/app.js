@@ -179,9 +179,24 @@ function sightings(w) {
   return el('details', 'sightings',
     el('summary', '', `Seen available ${seen.length === 1 ? 'once' : `${seen.length} times`}, last ${ago(seen[0].at)}`),
     el('ul', '', ...seen.map((s) => el('li', '',
-      el('div', 'when', el('time', '', when(s.at)), s.shot && newTab('Screenshot ↗', 'shot', `/api/shots/${s.shot}`)),
+      el('div', 'when', el('time', '', when(s.at)), el('span', 'stayed', stayed(s)), s.shot && newTab('Screenshot ↗', 'shot', `/api/shots/${s.shot}`)),
       ...s.tickets.map((t) => el('div', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price),
         t.text && el('p', 'said', t.text)))))));
+}
+
+/** How long a sighting's tickets were there, as closely as the checks tell: seen from at until
+ * last, gone by gone. Before at and between the checks no one knows. */
+function stayed(s) {
+  const span = (from, to) => (new Date(to) - new Date(from)) / 1000;
+  const time = (sec) => sec < 90 ? `${Math.round(sec)} s` : `${Math.round(sec / 30) / 2} min`.replace('.5', '½');
+  const seen = !never(s.last) ? span(s.at, s.last) : 0;
+  if (never(s.gone)) return seen ? `still there after ${time(seen)}` : 'still there';
+  const most = span(s.at, s.gone);
+  if (!seen) return `gone within ${time(most)}`;
+  const [from, to] = [time(seen), time(most)];
+  // "4–6 min", but "60 s – 3 min".
+  const minutes = from.endsWith(' min') && to.endsWith(' min');
+  return minutes ? `there ${from.slice(0, -4)}–${to}` : `there ${from} – ${to}`;
 }
 
 /** A link that opens in a new tab: the shop stays open beside the dashboard. */
