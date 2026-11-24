@@ -171,17 +171,31 @@ function renderWatches() {
   }));
 }
 
+/** The races whose sightings are open: the dashboard is drawn anew every few seconds, and they
+ * stay open until closed, in this browser after a reload too. */
+const openSightings = new Set((() => {
+  try { return JSON.parse(localStorage.getItem('openSightings')) ?? []; } catch { return []; }
+})());
+
+function toggleSightings(id, open) {
+  if (open) openSightings.add(id); else openSightings.delete(id);
+  try { localStorage.setItem('openSightings', JSON.stringify([...openSightings])); } catch { /* private window */ }
+}
+
 /** The times a wanted ticket was seen available: what its card said, and the shop's screenshot. */
 function sightings(w) {
   const seen = w.sightings ?? [];
   if (!seen.length) return null;
   const when = (iso) => new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  return el('details', 'sightings',
+  const box = el('details', 'sightings',
     el('summary', '', `Seen available ${seen.length === 1 ? 'once' : `${seen.length} times`}, last ${ago(seen[0].at)}`),
     el('ul', '', ...seen.map((s) => el('li', '',
       el('div', 'when', el('time', '', when(s.at)), el('span', 'stayed', stayed(s)), s.shot && newTab('Screenshot ↗', 'shot', `/api/shots/${s.shot}`)),
       ...s.tickets.map((t) => el('div', '', el('span', 'name', t.name), t.price && el('span', 'price', t.price),
         t.text && el('p', 'said', t.text)))))));
+  box.open = openSightings.has(w.id);
+  box.addEventListener('toggle', () => toggleSightings(w.id, box.open));
+  return box;
 }
 
 /** How long a sighting's tickets were there, as closely as the checks tell: seen from at until
