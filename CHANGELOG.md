@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.4.0 — 2026-11-24
+
 - A second look before an alert: a ticket counts as available only if it still is 3 seconds
   later, so a page still filling in — buttons there, the *Sold out* label not yet — sends no alert.
 - Proof of every ticket seen available: what its card said, with price, and a screenshot of the
